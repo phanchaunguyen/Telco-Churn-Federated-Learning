@@ -1,0 +1,143 @@
+# =============================================================================
+# Base configuration — Federated Learning for Telco Churn
+# All paths are RELATIVE to the repository root. Never hardcode absolute paths.
+# =============================================================================
+
+project:
+  name: fl-telco-churn
+  seed: 42
+
+# -----------------------------------------------------------------------------
+# Paths
+# -----------------------------------------------------------------------------
+paths:
+  raw_data: data/raw/telco.csv
+  processed_dir: data/processed
+  synthetic_dir: data/synthetic
+  results_dir: results
+  eda_parquet: data/processed/eda_7043.parquet
+  clean_parquet: data/processed/clean_7043.parquet
+  synthetic_parquet: data/synthetic/synthetic_1m.parquet
+
+# -----------------------------------------------------------------------------
+# Data cleaning
+# -----------------------------------------------------------------------------
+data:
+  target_col: churn
+  id_col: Customer ID
+  # Rows whose Customer Status equals this value are dropped BEFORE amplification
+  drop_status: Joined
+  # Expected shape of the clean artifact: ID + 29 features + 1 target
+  expected_clean_columns: 31
+  expected_feature_count: 29
+
+# -----------------------------------------------------------------------------
+# Amplification
+# -----------------------------------------------------------------------------
+amplification:
+  method: copula            # copula | ctgan
+  n_rows: 1000000
+  quality_gate:
+    ks_alpha: 0.05
+    max_auc_gap: 0.05       # train-on-synthetic / test-on-real AUC gap
+
+# -----------------------------------------------------------------------------
+# Partitioning
+# -----------------------------------------------------------------------------
+partitioning:
+  n_clients: 10
+  strategies:
+    - name: iid
+      alpha: null
+    - name: label_skew
+      alpha: 0.5
+    - name: label_skew
+      alpha: 0.1
+  scalability_k: [5, 10, 20, 50]
+
+# -----------------------------------------------------------------------------
+# Model
+# -----------------------------------------------------------------------------
+model:
+  name: mlp
+  hidden_dims: [128, 64, 32]
+  dropout: 0.3
+  batch_norm: true
+  # input_dim is RUNTIME-DETERMINED from X_train.shape[1] — never hardcode
+
+# -----------------------------------------------------------------------------
+# Federated learning
+# -----------------------------------------------------------------------------
+fl:
+  n_rounds: 50
+  fraction_fit: 0.5
+  fraction_evaluate: 0.5
+  local_epochs: 1
+  batch_size: 256
+  learning_rate: 0.001
+  strategies:
+    fedavg: {}
+    fedprox:
+      proximal_mu: 0.01
+    fedavgm:
+      server_momentum: 0.9
+
+# -----------------------------------------------------------------------------
+# Differential privacy
+# -----------------------------------------------------------------------------
+privacy:
+  enabled: false
+  noise_multiplier: 1.0
+  max_grad_norm: 1.0
+  delta: 1.0e-5
+  sweep_noise_multiplier: [0.0, 0.5, 1.0, 2.0]
+
+# -----------------------------------------------------------------------------
+# Tracking
+# -----------------------------------------------------------------------------
+mlflow:
+  tracking_uri: http://localhost:5000
+  experiment_name: fl-telco-churn
+
+# -----------------------------------------------------------------------------
+# Storage (MinIO)
+# -----------------------------------------------------------------------------
+minio:
+  endpoint: localhost:9000
+  console: localhost:9001
+  access_key: minioadmin
+  secret_key: minioadmin
+  bucket_prefix: clients
+
+# -----------------------------------------------------------------------------
+# Spark — batch data pipeline + evaluation aggregation
+# Spark NEVER trains models and is NEVER inside the FL loop.
+# -----------------------------------------------------------------------------
+spark:
+  app_name: fl-telco-churn
+  master: "local[*]"
+  driver_memory: 6g
+  executor_memory: 4g
+  shuffle_partitions: 8
+  # Benchmark targets (success criterion #8)
+  benchmark:
+    sizes: [10000, 100000, 1000000]
+    max_minutes_1m: 15
+
+# -----------------------------------------------------------------------------
+# Kafka — telemetry bus. NEVER carries model weights.
+# gRPC/Flower remains the ONLY channel for model weights.
+# -----------------------------------------------------------------------------
+kafka:
+  bootstrap_servers: kafka:9092
+  topics:
+    telemetry: fl_telemetry
+    round_summary: fl_round_summary
+  partitions: 3
+  replication_factor: 1
+  retention_ms: 604800000        # 7 days
+  consumer:
+    flush_interval_sec: 10       # MLflow micro-batch interval
+  fallback:
+    enabled: false
+    file_path: results/telemetry.jsonl
