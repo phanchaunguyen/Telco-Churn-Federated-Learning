@@ -22,6 +22,8 @@
 | 09 | `09_fl_architecture.md` | B | W4 | ⬜ | Flower server/client, strategy |
 | 10 | `10_experiment_protocol.md` | B | W5 | ⬜ | Protocol E0–E7, seed, MLflow tags |
 | 11 | `11_integration_log.md` | All | W10 | ⬜ | Log tích hợp end-to-end |
+| **12** | `12_architecture.md` | All | W1 | ✅ | **Sơ đồ Mermaid: 4 layers, data pipeline, FL round, experiment protocol, non-overlap** |
+| **13** | `13_layer1_plan.md` | A | W2–W3 | 🚧 | **Kế hoạch hoàn thành Layer 1: 9 phases, 12 artifacts, 8 commits** |
 
 ---
 
@@ -29,11 +31,11 @@
 
 | Vai trò | Đọc |
 |---|---|
-| **Person A** (Data) | 01 → 04 → **05** → 06 → 07 |
-| **Person B** (FL Infra) | 01 → 02 → **08** → 09 → 10 |
-| **Person C** (ML) | 01 → 03 → 04 → 06 |
-| **Person D** (MLOps/BI) | 01 → 04 → **08** → 10 → 11 |
-| **Người mới vào dự án** | 00 → 01 → 04 → 05 → 08 → 02 → 03 |
+| **Person A** (Data) | 01 → 04 → **05** → 06 → 07 → **12** |
+| **Person B** (FL Infra) | 01 → 02 → **08** → 09 → 10 → **12** |
+| **Person C** (ML) | 01 → 03 → 04 → 06 → **12** |
+| **Person D** (MLOps/BI) | 01 → 04 → **08** → 10 → 11 → **12** |
+| **Người mới vào dự án** | 00 → 01 → **12** → 04 → 05 → 08 → 02 → 03 |
 
 ---
 
