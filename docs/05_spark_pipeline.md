@@ -116,6 +116,52 @@ spark:
   shuffle_partitions: 8
 ```
 
+### 3.1 Kết quả đo được (2026-11-19)
+
+Chạy `python scripts/benchmark_spark.py` trên máy 16 GB, Java 21, PySpark 4.3.0.
+
+| n_rows | mode | driver | shuffle | clean | amplify | partition | **total** | under 15 min |
+|---|---|---|---|---|---|---|---|---|
+| 10,000 | `local[*]` | 6g | 8 | 3.25s | 3.48s | 3.49s | **10.22s** | ✅ |
+| 100,000 | `local[*]` | 6g | 8 | 0.22s | 1.99s | 4.85s | **7.06s** | ✅ |
+| 1,000,000 | `local[*]` | 6g | 8 | 0.15s | 8.52s | 14.53s | **23.20s (0.39 min)** | ✅ |
+
+**1M end-to-end: 0.39 phút** — nhanh hơn ngưỡng 15 phút **38×**.
+
+Ghi chú đọc bảng:
+- 10K chậm hơn 100K ở cột `clean` vì lần chạy đầu bao gồm JVM warm-up và
+  đọc CSV lần đầu. Đây là hiện tượng bình thường, không phải lỗi.
+- `partition` là stage tốn thời gian nhất ở 1M (14.53s) vì phải ghi 10 thư mục
+  parquet riêng biệt.
+- Toàn bộ nằm trong `local[*]` — không có cluster thật.
+
+### 3.2 Parity với pandas
+
+| Artifact | pandas | Spark | Khớp |
+|---|---|---|---|
+| `clean_7043` rows | 6,589 | 6,589 | ✅ |
+| `clean_7043` churned | 1,869 | 1,869 | ✅ |
+| `clean_7043` churn rate | 0.2837 | 0.2837 | ✅ (Δ < 1e-9) |
+| `synthetic_1m` rows | 1,000,000 | 1,000,000 | ✅ |
+| Partition sizes (IID) | 90,000 × 10 | 90,000 × 10 | ✅ |
+| Partition churn (α=0.1) | 0.0087–0.9123 | 0.0087–0.9123 | ✅ |
+
+### 3.3 Ghi chú về MinIO
+
+`spark_partition.py` mặc định ghi **local parquet** (`use_minio=False`).
+
+Lý do: ghi lên MinIO qua `s3a://` cần `hadoop-aws` + AWS SDK v2 bundle
+(**533 MB**). Nạp bộ jar đó làm mỗi lần khởi động Spark mất thêm vài phút,
+trong khi layout local **giống hệt** về nội dung.
+
+Bật MinIO khi cần demo end-to-end:
+
+```python
+build_partitions_spark("iid", use_minio=True)
+```
+
+Jars đã tải sẵn trong `jars/` (49 MB, không gồm AWS SDK).
+
 ---
 
 ## 4. Spark vs pandas — phân chia trách nhiệm

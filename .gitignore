@@ -57,3 +57,6 @@ logs/
 
 # --- pytest ---
 .pytest_cache/
+
+# --- Spark jars (downloaded, not source) ---
+jars/*.jar

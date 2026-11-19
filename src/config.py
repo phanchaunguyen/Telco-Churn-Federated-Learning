@@ -157,6 +157,51 @@ class MinioCfg(BaseModel):
     bucket_prefix: str = "clients"
 
 
+class SparkBenchmarkCfg(BaseModel):
+    sizes: list[int] = Field(default_factory=lambda: [10_000, 100_000, 1_000_000])
+    max_minutes_1m: int = 15
+
+
+class SparkCfg(BaseModel):
+    """Batch data pipeline + evaluation aggregation settings.
+
+    Spark never trains models and never sits inside the FL loop.
+    """
+
+    app_name: str = "fl-telco-churn"
+    master: str = "local[*]"
+    driver_memory: str = "6g"
+    executor_memory: str = "4g"
+    shuffle_partitions: int = 8
+    benchmark: SparkBenchmarkCfg = Field(default_factory=SparkBenchmarkCfg)
+
+
+class KafkaTopicsCfg(BaseModel):
+    telemetry: str = "fl_telemetry"
+    round_summary: str = "fl_round_summary"
+
+
+class KafkaConsumerCfg(BaseModel):
+    flush_interval_sec: int = 10
+
+
+class KafkaFallbackCfg(BaseModel):
+    enabled: bool = False
+    file_path: str = "results/telemetry.jsonl"
+
+
+class KafkaCfg(BaseModel):
+    """Telemetry bus settings. Kafka never carries model weights."""
+
+    bootstrap_servers: str = "kafka:9092"
+    topics: KafkaTopicsCfg = Field(default_factory=KafkaTopicsCfg)
+    partitions: int = 3
+    replication_factor: int = 1
+    retention_ms: int = 604_800_000
+    consumer: KafkaConsumerCfg = Field(default_factory=KafkaConsumerCfg)
+    fallback: KafkaFallbackCfg = Field(default_factory=KafkaFallbackCfg)
+
+
 class Config(BaseModel):
     """Root configuration object."""
 
@@ -171,6 +216,8 @@ class Config(BaseModel):
     privacy: PrivacyCfg = Field(default_factory=PrivacyCfg)
     mlflow: MLflowCfg = Field(default_factory=MLflowCfg)
     minio: MinioCfg = Field(default_factory=MinioCfg)
+    spark: SparkCfg = Field(default_factory=SparkCfg)
+    kafka: KafkaCfg = Field(default_factory=KafkaCfg)
 
 
 # ---------------------------------------------------------------------------

@@ -252,7 +252,13 @@ def decode(
 # Validation
 # =============================================================================
 def validate_synthetic(df: pd.DataFrame, *, expected_churn_rate: float) -> None:
-    """Assert the synthetic frame is structurally sound."""
+    """Assert the synthetic frame is structurally sound.
+
+    The churn-rate tolerance scales with the sample size. A fixed 1% band is
+    right for 1M rows but rejects a perfectly valid 10K draw, where the
+    binomial standard error alone is ~0.45%. The tolerance is therefore
+    ``max(MAX_CHURN_RATE_DRIFT, 4 * binomial SE)``.
+    """
     assert list(df.columns) == FEATURE_COLS + [TARGET_COL], (
         f"Unexpected column order: {list(df.columns)}"
     )
@@ -260,15 +266,25 @@ def validate_synthetic(df: pd.DataFrame, *, expected_churn_rate: float) -> None:
     assert not df.isna().any().any(), "Synthetic frame contains NaN"
     assert set(df[TARGET_COL].unique()) == {0, 1}, "Target must be binary"
 
+    n = len(df)
+    se = float(np.sqrt(expected_churn_rate * (1 - expected_churn_rate) / n))
+    tolerance = max(MAX_CHURN_RATE_DRIFT, 4 * se)
+
     drift = abs(float(df[TARGET_COL].mean()) - expected_churn_rate)
-    assert drift < MAX_CHURN_RATE_DRIFT, (
-        f"churn rate drift {drift:.4f} exceeds {MAX_CHURN_RATE_DRIFT}"
+    assert drift < tolerance, (
+        f"churn rate drift {drift:.4f} exceeds tolerance {tolerance:.4f} "
+        f"(n={n:,}, binomial SE {se:.4f})"
     )
 
     for col in CATEGORICAL_COLS:
         assert df[col].dtype == object, f"{col} should be categorical, got {df[col].dtype}"
 
-    logger.info("validate_synthetic: OK (%s rows)", f"{len(df):,}")
+    logger.info(
+        "validate_synthetic: OK (%s rows, churn drift %.4f < %.4f)",
+        f"{n:,}",
+        drift,
+        tolerance,
+    )
 
 
 # =============================================================================
