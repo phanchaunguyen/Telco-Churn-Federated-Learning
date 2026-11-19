@@ -26,7 +26,7 @@ cần. Layer 1 kết thúc khi:
 | `data/processed/clean_7043.parquet` (D0.6) | ✅ | 6,589 × 31 |
 | `configs/base.yaml` | ✅ | `data`, `amplification`, `partitioning`, `spark`, `kafka` |
 | `docker-compose.yml` | ✅ | minio, spark-master, spark-worker, kafka, mlflow, postgres |
-| `tests/test_clean.py` | ✅ | 29 tests pass |
+| `tests/test_01_clean.py` | ✅ | 29 tests pass |
 | `docs/12_architecture.md` | ✅ | 6 sơ đồ Mermaid |
 
 ## 2. Còn thiếu (13 items)
@@ -42,8 +42,8 @@ cần. Layer 1 kết thúc khi:
 | 7 | Spark partitioner → MinIO | `src/partitioning/spark_partition.py` | P6 |
 | 8 | Silo verification | `src/partitioning/verify_silos.py` | P7 |
 | 9 | Config block `split:` | `configs/base.yaml` | P1 |
-| 10 | Tests split + partition | `tests/test_split.py`, `tests/test_partition.py` | P1, P6 |
-| 11 | Benchmark | `scripts/benchmark_spark.py` | P8 |
+| 10 | Tests split + partition | `tests/test_02_split.py`, `tests/test_05_partition.py` | P1, P6 |
+| 11 | Benchmark | `scripts/03_benchmark_spark.py` | P8 |
 | 12 | Docs synthetic | `docs/06_synthetic_decision.md` | P4 |
 | 13 | Docs partition | `docs/07_partition_design.md` | P6 |
 
@@ -103,8 +103,8 @@ Bất biến: 29 features + churn · không leakage · disjoint · tổng = 900,
 | 1.1 | Thêm block `split:` vào `configs/base.yaml` |
 | 1.2 | `split_real(df, test_size, seed)` → `(train, test)` |
 | 1.3 | Assertions: disjoint ID, stratified ±1%, shape đúng |
-| 1.4 | CLI `python -m src.data.split` ghi 2 parquet |
-| 1.5 | `tests/test_split.py` |
+| 1.4 | CLI `python -m src.data.s02_split` ghi 2 parquet |
+| 1.5 | `tests/test_02_split.py` |
 
 **Config mới:**
 ```yaml
@@ -200,7 +200,7 @@ split:
 | 6.3 | Sinh synthetic `Customer ID` (SYN-0000001…) |
 | 6.4 | Ghi metadata: churn ratio + size per client |
 | 6.5 | Spark version ghi thẳng MinIO |
-| 6.6 | `tests/test_partition.py` |
+| 6.6 | `tests/test_05_partition.py` |
 
 **Verification:**
 - IID: ~90,000 rows/client, churn 28.37% ± 0.5%
@@ -314,12 +314,12 @@ flowchart TB
 
 | # | Check | Lệnh |
 |---|---|---|
-| 1 | `train_real` + `test_real` disjoint | `pytest tests/test_split.py -v` |
-| 2 | Spark clean khớp pandas | `python -m src.data.spark_clean --verify` |
-| 3 | `synthetic_1m` = 1,000,000 × 30 | `python -m src.data.amplify --check` |
-| 4 | Quality gate pass | `python -m src.data.quality_gate` |
-| 5 | `synth_train` 900K + `synth_test` 100K | `pytest tests/test_split.py -v` |
-| 6 | 10 silo trên MinIO | `python -m src.partitioning.verify_silos` |
+| 1 | `train_real` + `test_real` disjoint | `pytest tests/test_02_split.py -v` |
+| 2 | Spark clean khớp pandas | `python -m src.data.s01_clean_spark --verify` |
+| 3 | `synthetic_1m` = 1,000,000 × 30 | `python -m src.data.s03_amplify --check` |
+| 4 | Quality gate pass | `python -m src.data.s04_quality_gate` |
+| 5 | `synth_train` 900K + `synth_test` 100K | `pytest tests/test_02_split.py -v` |
+| 6 | 10 silo trên MinIO | `python -m src.partitioning.s06_verify_silos` |
 | 7 | Không silo nào chứa leakage | `verify_silos` assertion |
 | 8 | Tổng rows silo = 900,000 | `verify_silos` assertion |
 | 9 | Benchmark 1M < 15 phút | `results/spark_benchmark.csv` |

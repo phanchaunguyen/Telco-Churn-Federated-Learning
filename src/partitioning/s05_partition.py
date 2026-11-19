@@ -21,7 +21,7 @@ Artifacts produced
 
 Usage
 -----
->>> from src.partitioning.partitioner import build_partitions
+>>> from src.partitioning.s05_partition import build_partitions
 >>> parts = build_partitions(strategy="label_skew", alpha=0.1, k=10)
 >>> len(parts)
 10
@@ -38,7 +38,7 @@ import numpy as np
 import pandas as pd
 
 from src.config import get_config
-from src.data.clean import FEATURE_COLS, TARGET_COL
+from src.data.s01_clean import FEATURE_COLS, TARGET_COL
 
 logger = logging.getLogger(__name__)
 
@@ -324,7 +324,7 @@ def build_partitions(
 
 
 def main() -> None:
-    """CLI entry point: ``python -m src.partitioning.partitioner``."""
+    """CLI entry point: ``python -m src.partitioning.s05_partition``."""
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s | %(levelname)-7s | %(name)s | %(message)s",

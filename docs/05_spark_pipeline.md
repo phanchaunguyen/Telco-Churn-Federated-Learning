@@ -118,7 +118,7 @@ spark:
 
 ### 3.1 Kết quả đo được (2026-11-19)
 
-Chạy `python scripts/benchmark_spark.py` trên máy 16 GB, Java 21, PySpark 4.3.0.
+Chạy `python scripts/03_benchmark_spark.py` trên máy 16 GB, Java 21, PySpark 4.3.0.
 
 | n_rows | mode | driver | shuffle | clean | amplify | partition | **total** | under 15 min |
 |---|---|---|---|---|---|---|---|---|
@@ -176,7 +176,7 @@ Jars đã tải sẵn trong `jars/` (49 MB, không gồm AWS SDK).
 | Eval aggregation | **Spark** | 1M test set |
 
 **`src/data/clean.py` (pandas) được GIỮ làm reference implementation:**
-1. Chạy `pytest tests/test_clean.py` nhanh (không cần Spark)
+1. Chạy `pytest tests/test_01_clean.py` nhanh (không cần Spark)
 2. Sanity check: Spark output phải khớp pandas output (shape, column set, churn rate)
 
 ---

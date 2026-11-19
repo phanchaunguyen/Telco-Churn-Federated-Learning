@@ -38,7 +38,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from src.config import get_config
-from src.data.spark_session import get_spark, stop_spark
+from src.data.s00_spark_session import get_spark, stop_spark
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +48,7 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 def _time_clean(spark: Any) -> float:
     """Time the CLEAN stage."""
-    from src.data.spark_clean import clean, read_raw
+    from src.data.s01_clean_spark import clean, read_raw
 
     cfg = get_config()
     t0 = time.perf_counter()
@@ -62,7 +62,7 @@ def _time_clean(spark: Any) -> float:
 
 def _time_amplify(spark: Any, n_rows: int) -> float:
     """Time the AMPLIFY stage for ``n_rows`` synthetic rows."""
-    from src.data.spark_amplify import build_synthetic_spark
+    from src.data.s03_amplify_spark import build_synthetic_spark
 
     t0 = time.perf_counter()
     sdf = build_synthetic_spark(
@@ -76,7 +76,7 @@ def _time_amplify(spark: Any, n_rows: int) -> float:
 
 def _time_partition(spark: Any, n_rows: int) -> float:
     """Time the PARTITION stage for a synthetic frame of ``n_rows``."""
-    from src.partitioning.partitioner import assign_iid, assign_synthetic_ids
+    from src.partitioning.s05_partition import assign_iid, assign_synthetic_ids
 
     cfg = get_config()
     t0 = time.perf_counter()
@@ -156,7 +156,7 @@ def run_benchmark(
 
 
 def main() -> None:
-    """CLI entry point: ``python scripts/benchmark_spark.py``."""
+    """CLI entry point: ``python scripts/03_benchmark_spark.py``."""
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s | %(levelname)-7s | %(name)s | %(message)s",

@@ -24,6 +24,7 @@
 | 11 | `11_integration_log.md` | All | W10 | ⬜ | Log tích hợp end-to-end |
 | **12** | `12_architecture.md` | All | W1 | ✅ | **Sơ đồ Mermaid: 4 layers, data pipeline, FL round, experiment protocol, non-overlap** |
 | **13** | `13_layer1_plan.md` | A | W2–W3 | 🚧 | **Kế hoạch hoàn thành Layer 1: 9 phases, 12 artifacts, 8 commits** |
+| **14** | `14_naming_convention.md` | All | W1 | ✅ | **Quy ước đánh số file/thư mục theo thứ tự pipeline** |
 
 ---
 

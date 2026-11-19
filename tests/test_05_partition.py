@@ -1,8 +1,8 @@
-"""Tests for :mod:`src.partitioning.partitioner` and ``verify_silos``.
+"""Tests for :mod:`src.partitioning.s05_partition` and ``verify_silos``.
 
 Run with::
 
-    pytest tests/test_partition.py -v
+    pytest tests/test_05_partition.py -v
 """
 
 from __future__ import annotations
@@ -11,8 +11,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from src.data.clean import FEATURE_COLS, ID_COL, TARGET_COL
-from src.partitioning.partitioner import (
+from src.data.s01_clean import FEATURE_COLS, ID_COL, TARGET_COL
+from src.partitioning.s05_partition import (
     MIN_CLASS_COUNT,
     MIN_CLIENT_SHARE,
     assign_dirichlet,

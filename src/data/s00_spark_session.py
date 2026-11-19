@@ -7,7 +7,7 @@ benchmark numbers meaningless.
 
 Usage
 -----
->>> from src.data.spark_session import get_spark
+>>> from src.data.s00_spark_session import get_spark
 >>> spark = get_spark("clean")
 >>> spark.version
 '4.3.0'

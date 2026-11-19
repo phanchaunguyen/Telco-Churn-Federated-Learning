@@ -1,8 +1,8 @@
-"""Tests for :mod:`src.data.split`.
+"""Tests for :mod:`src.data.s02_split`.
 
 Run with::
 
-    pytest tests/test_split.py -v
+    pytest tests/test_02_split.py -v
 """
 
 from __future__ import annotations
@@ -10,14 +10,14 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from src.data.clean import (
+from src.data.s01_clean import (
     EXPECTED_CLEAN_COLUMNS,
     FEATURE_COLS,
     ID_COL,
     TARGET_COL,
     build_clean,
 )
-from src.data.split import (
+from src.data.s02_split import (
     MAX_CHURN_RATE_DELTA,
     build_split,
     split_real,

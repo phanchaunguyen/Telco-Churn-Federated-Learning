@@ -1,8 +1,8 @@
-"""Tests for :mod:`src.data.clean`.
+"""Tests for :mod:`src.data.s01_clean`.
 
 Run with::
 
-    pytest tests/test_clean.py -v
+    pytest tests/test_01_clean.py -v
 """
 
 from __future__ import annotations
@@ -10,7 +10,7 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from src.data.clean import (
+from src.data.s01_clean import (
     ACCOUNT_COLS,
     CATEGORICAL_COLS,
     CONSTANT_COLS,

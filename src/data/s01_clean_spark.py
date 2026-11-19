@@ -2,7 +2,7 @@
 
 Pipeline position: **CLEAN → SPLIT → AMPLIFY → SPLIT → PARTITION**
 
-This module is the Spark counterpart of :mod:`src.data.clean`. It must produce
+This module is the Spark counterpart of :mod:`src.data.s01_clean`. It must produce
 a byte-for-byte equivalent result: same rows, same columns, same churn rate.
 The pandas implementation stays in the repo as the reference that the parity
 assertions compare against, and as the fast path for unit tests.
@@ -21,7 +21,7 @@ Artifacts produced
 
 Usage
 -----
->>> from src.data.spark_clean import build_clean_spark
+>>> from src.data.s01_clean_spark import build_clean_spark
 >>> df = build_clean_spark(write=True)
 >>> df.count()
 6589
@@ -34,7 +34,7 @@ from pathlib import Path
 from typing import Any
 
 from src.config import get_config
-from src.data.clean import (
+from src.data.s01_clean import (
     CONSTANT_COLS,
     DERIVED_DUP_COLS,
     DROPPED_COLS,
@@ -50,7 +50,7 @@ from src.data.clean import (
     TARGET_COL,
     DROP_STATUS_VALUE,
 )
-from src.data.spark_session import get_spark, stop_spark
+from src.data.s00_spark_session import get_spark, stop_spark
 
 logger = logging.getLogger(__name__)
 
@@ -288,7 +288,7 @@ def build_clean_spark(
 
 def _pandas_reference_stats() -> dict[str, Any]:
     """Compute the same statistics from the pandas reference implementation."""
-    from src.data.clean import build_clean
+    from src.data.s01_clean import build_clean
 
     df, _ = build_clean(write=False)
     return {
@@ -301,7 +301,7 @@ def _pandas_reference_stats() -> dict[str, Any]:
 
 
 def main() -> None:
-    """CLI entry point: ``python -m src.data.spark_clean``."""
+    """CLI entry point: ``python -m src.data.s01_clean_spark``."""
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s | %(levelname)-7s | %(name)s | %(message)s",

@@ -14,7 +14,7 @@ Artifacts produced
 
 Usage
 -----
->>> from src.data.clean import build_clean
+>>> from src.data.s01_clean import build_clean
 >>> df_clean, df_eda = build_clean(write=True)
 >>> df_clean.shape
 (..., 31)
@@ -430,7 +430,7 @@ def build_clean(
 
 
 def main() -> None:
-    """CLI entry point: ``python -m src.data.clean``."""
+    """CLI entry point: ``python -m src.data.s01_clean``."""
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s | %(levelname)-7s | %(name)s | %(message)s",

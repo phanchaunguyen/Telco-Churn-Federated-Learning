@@ -21,7 +21,7 @@ Artifacts produced
 
 Usage
 -----
->>> from src.data.quality_gate import run_quality_gate
+>>> from src.data.s04_quality_gate import run_quality_gate
 >>> report = run_quality_gate(write=True)
 >>> report["passed"]
 True
@@ -41,7 +41,7 @@ from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.metrics import roc_auc_score
 
 from src.config import get_config
-from src.data.clean import CATEGORICAL_COLS, FEATURE_COLS, NUMERIC_COLS, TARGET_COL
+from src.data.s01_clean import CATEGORICAL_COLS, FEATURE_COLS, NUMERIC_COLS, TARGET_COL
 
 logger = logging.getLogger(__name__)
 
@@ -269,7 +269,7 @@ def run_quality_gate(
 
 
 def main() -> None:
-    """CLI entry point: ``python -m src.data.quality_gate``."""
+    """CLI entry point: ``python -m src.data.s04_quality_gate``."""
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s | %(levelname)-7s | %(name)s | %(message)s",

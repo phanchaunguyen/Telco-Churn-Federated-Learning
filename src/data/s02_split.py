@@ -19,7 +19,7 @@ Artifacts produced
 
 Usage
 -----
->>> from src.data.split import build_split
+>>> from src.data.s02_split import build_split
 >>> train, test = build_split(write=True)
 >>> train.shape, test.shape
 ((5271, 31), (1318, 31))
@@ -34,7 +34,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 
 from src.config import get_config
-from src.data.clean import ID_COL, TARGET_COL, validate_clean
+from src.data.s01_clean import ID_COL, TARGET_COL, validate_clean
 
 logger = logging.getLogger(__name__)
 
@@ -184,7 +184,7 @@ def build_split(
     src_path = Path(clean_path) if clean_path is not None else cfg.paths.clean_parquet
     if not src_path.exists():
         raise FileNotFoundError(
-            f"Clean artifact not found: {src_path}. Run `bash scripts/run_clean.sh` first."
+            f"Clean artifact not found: {src_path}. Run `bash scripts/02_run_clean.sh` first."
         )
 
     df = pd.read_parquet(src_path)
@@ -215,7 +215,7 @@ def build_split(
 
 
 def main() -> None:
-    """CLI entry point: ``python -m src.data.split``."""
+    """CLI entry point: ``python -m src.data.s02_split``."""
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s | %(levelname)-7s | %(name)s | %(message)s",
@@ -287,7 +287,7 @@ def build_synthetic_split(
     )
     if not src_path.exists():
         raise FileNotFoundError(
-            f"Synthetic artifact not found: {src_path}. Run `python -m src.data.amplify` first."
+            f"Synthetic artifact not found: {src_path}. Run `python -m src.data.s03_amplify` first."
         )
 
     df = pd.read_parquet(src_path)
@@ -323,7 +323,7 @@ def build_synthetic_split(
 
 
 def main_synthetic() -> None:
-    """CLI entry point: ``python -m src.data.split --synthetic``."""
+    """CLI entry point: ``python -m src.data.s02_split --synthetic``."""
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s | %(levelname)-7s | %(name)s | %(message)s",

@@ -2,7 +2,7 @@
 
 Pipeline position: **CLEAN → SPLIT → AMPLIFY → SPLIT → PARTITION → VERIFY**
 
-The partitioning logic itself lives in :mod:`src.partitioning.partitioner` and
+The partitioning logic itself lives in :mod:`src.partitioning.s05_partition` and
 is reused here unchanged — this module only adds the Spark write path. Keeping
 one implementation of the assignment algorithm means the pandas and Spark
 outputs cannot drift apart.
@@ -22,7 +22,7 @@ Artifacts produced
 
 Usage
 -----
->>> from src.partitioning.spark_partition import build_partitions_spark
+>>> from src.partitioning.s05_partition_spark import build_partitions_spark
 >>> build_partitions_spark(strategy="iid", use_minio=False)
 """
 
@@ -37,9 +37,9 @@ from typing import Any, Literal
 import pandas as pd
 
 from src.config import get_config
-from src.data.clean import FEATURE_COLS, ID_COL, TARGET_COL
-from src.data.spark_session import get_spark, stop_spark
-from src.partitioning.partitioner import (
+from src.data.s01_clean import FEATURE_COLS, ID_COL, TARGET_COL
+from src.data.s00_spark_session import get_spark, stop_spark
+from src.partitioning.s05_partition import (
     assign_dirichlet,
     assign_iid,
     assign_synthetic_ids,
@@ -201,7 +201,7 @@ def build_partitions_spark(
 
 
 def main() -> None:
-    """CLI entry point: ``python -m src.partitioning.spark_partition``."""
+    """CLI entry point: ``python -m src.partitioning.s05_partition_spark``."""
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s | %(levelname)-7s | %(name)s | %(message)s",

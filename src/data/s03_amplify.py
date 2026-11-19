@@ -31,7 +31,7 @@ Artifacts produced
 
 Usage
 -----
->>> from src.data.amplify import build_synthetic
+>>> from src.data.s03_amplify import build_synthetic
 >>> df = build_synthetic(n_rows=1_000_000, write=True)
 >>> df.shape
 (1000000, 30)
@@ -49,7 +49,7 @@ import pandas as pd
 from scipy import stats
 
 from src.config import get_config
-from src.data.clean import CATEGORICAL_COLS, FEATURE_COLS, NUMERIC_COLS, TARGET_COL
+from src.data.s01_clean import CATEGORICAL_COLS, FEATURE_COLS, NUMERIC_COLS, TARGET_COL
 
 logger = logging.getLogger(__name__)
 
@@ -302,7 +302,7 @@ def build_synthetic(
     src_path = Path(train_path) if train_path is not None else cfg.paths.train_real_parquet
     if not src_path.exists():
         raise FileNotFoundError(
-            f"train_real not found: {src_path}. Run `python -m src.data.split` first."
+            f"train_real not found: {src_path}. Run `python -m src.data.s02_split` first."
         )
 
     train = pd.read_parquet(src_path)
@@ -340,7 +340,7 @@ def build_synthetic(
 
 
 def main() -> None:
-    """CLI entry point: ``python -m src.data.amplify``."""
+    """CLI entry point: ``python -m src.data.s03_amplify``."""
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s | %(levelname)-7s | %(name)s | %(message)s",

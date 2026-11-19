@@ -219,10 +219,10 @@ gộp sẽ làm mất tín hiệu.
 
 ```bash
 # Sinh lại cả 2 artifact
-bash scripts/run_clean.sh
+bash scripts/02_run_clean.sh
 
 # Chạy test
-pytest tests/test_clean.py -v
+pytest tests/test_01_clean.py -v
 
 # Chạy lại EDA
 jupyter nbconvert --to notebook --execute --inplace notebooks/01_eda.ipynb
@@ -238,7 +238,7 @@ Từ W2, bước CLEAN và AMPLIFY được implement bằng **PySpark** (`src/d
 **Không thay đổi semantics:** cùng drop list, cùng 29 features, cùng 31 cột output.
 
 `src/data/clean.py` (pandas) vẫn được **giữ làm reference implementation** để:
-1. Chạy test nhanh (`pytest tests/test_clean.py`) — không cần Spark
+1. Chạy test nhanh (`pytest tests/test_01_clean.py`) — không cần Spark
 2. Sanity check: Spark output phải khớp pandas output (row count, column set, churn rate)
 
 **Assertion bổ sung:** `spark_clean.py` phải tái tạo đúng `clean_7043.parquet` mà

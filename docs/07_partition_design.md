@@ -113,7 +113,7 @@ và FedAvgM sẽ vượt FedAvg.
 
 ## 4. Silo verification gate
 
-`python -m src.partitioning.verify_silos` → **PASS**
+`python -m src.partitioning.s06_verify_silos` → **PASS**
 
 | Check | IID | α=0.5 | α=0.1 |
 |---|---|---|---|
@@ -158,9 +158,9 @@ Mỗi parquet: `Customer ID` (SYN-0000001…) + 29 features + `churn` = **31 c�
 ## 7. Tái lập
 
 ```bash
-python -m src.partitioning.partitioner    # sinh 3 bộ partition
-python -m src.partitioning.verify_silos   # gate
-pytest tests/test_partition.py -v         # 20 tests
+python -m src.partitioning.s05_partition    # sinh 3 bộ partition
+python -m src.partitioning.s06_verify_silos   # gate
+pytest tests/test_05_partition.py -v         # 20 tests
 ```
 
 ---

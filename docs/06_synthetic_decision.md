@@ -158,10 +158,10 @@ cùng held-out set với model synthetic. Đây mới là so sánh like-for-like
 ## 7. Tái lập
 
 ```bash
-python -m src.data.split              # train_real / test_real
-python -m src.data.amplify            # synthetic_1m  (~14 giây)
-python -m src.data.quality_gate       # quality_report.json
-python -m src.data.split --synthetic  # synth_train / synth_test
+python -m src.data.s02_split              # train_real / test_real
+python -m src.data.s03_amplify            # synthetic_1m  (~14 giây)
+python -m src.data.s04_quality_gate       # quality_report.json
+python -m src.data.s02_split --synthetic  # synth_train / synth_test
 ```
 
 ---

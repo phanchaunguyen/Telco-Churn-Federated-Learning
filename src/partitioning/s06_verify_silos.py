@@ -22,7 +22,7 @@ Artifacts produced
 
 Usage
 -----
->>> from src.partitioning.verify_silos import verify_all
+>>> from src.partitioning.s06_verify_silos import verify_all
 >>> report = verify_all(write=True)
 >>> report["passed"]
 True
@@ -38,7 +38,7 @@ from typing import Any
 import pandas as pd
 
 from src.config import get_config
-from src.data.clean import DROPPED_COLS, FEATURE_COLS, ID_COL, TARGET_COL
+from src.data.s01_clean import DROPPED_COLS, FEATURE_COLS, ID_COL, TARGET_COL
 
 logger = logging.getLogger(__name__)
 
@@ -200,7 +200,7 @@ def verify_all(*, write: bool = True) -> dict[str, Any]:
 
 
 def main() -> None:
-    """CLI entry point: ``python -m src.partitioning.verify_silos``."""
+    """CLI entry point: ``python -m src.partitioning.s06_verify_silos``."""
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s | %(levelname)-7s | %(name)s | %(message)s",

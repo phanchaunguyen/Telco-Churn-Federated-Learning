@@ -83,24 +83,41 @@ telco.csv (7043 × 50)
 
 ## 4. Repository layout
 
+> **Naming convention:** every file with an execution order carries a numeric
+> prefix. Python modules use `sNN_` (a module name cannot start with a digit);
+> everything else uses `NN_`. See [`docs/14_naming_convention.md`](docs/14_naming_convention.md).
+
 ```
 src/
-  data/          # clean + amplification
-  partitioning/  # IID + label skew
-  features/      # preprocessing
-  models/        # MLP
-  fl/            # Flower server/client/strategies
-  baselines/     # centralized + local-only
-  tracking/      # MLflow
-  serving/       # FastAPI
-notebooks/       # EDA + analyses
-results/         # experiment outputs
-dags/            # Airflow
-dashboards/      # Superset exports
-docs/            # numbered docs (00_index, 01_kickoff, ...)
-configs/         # YAML configs
-scripts/         # entrypoint shell scripts
-tests/           # pytest
+  config.py                    # shared infrastructure, not a pipeline stage
+  data/
+    s00_spark_session.py       # SparkSession factory
+    s01_clean.py               # CLEAN (pandas reference)
+    s01_clean_spark.py         # CLEAN (Spark, parity-checked)
+    s02_split.py               # SPLIT 80/20 + 90/10
+    s03_amplify.py             # AMPLIFY (rank-based Gaussian Copula)
+    s03_amplify_spark.py       # AMPLIFY (Spark parallel)
+    s04_quality_gate.py        # KS + correlation + TSTR
+  partitioning/
+    s05_partition.py           # IID + Dirichlet assignment
+    s05_partition_spark.py     # PARTITION -> parquet/MinIO
+    s06_verify_silos.py        # Layer 1 gate
+  features/                    # preprocessing
+  models/                      # MLP
+  fl/                          # Flower server/client/strategies
+  baselines/                   # centralized + local-only
+  evaluation/                  # Spark aggregation
+  telemetry/                   # Kafka producer/consumer
+  tracking/                    # MLflow
+  serving/                     # FastAPI
+notebooks/                     # 01_eda.ipynb
+results/                       # experiment outputs
+dags/                          # Airflow
+dashboards/                    # Superset exports
+docs/                          # numbered docs (00_index, 01_kickoff, ...)
+configs/                       # YAML configs
+scripts/                       # 00_up.sh, 01_verify_env.py, 02_run_clean.sh, 03_benchmark_spark.py
+tests/                         # test_01_clean.py, test_02_split.py, test_05_partition.py
 ```
 
 ## 5. Quick start
@@ -117,10 +134,10 @@ docker compose up -d
 docker compose --profile full up -d
 
 # 3. Verify
-python scripts/verify_env.py
+python scripts/01_verify_env.py
 
 # 4. Clean the dataset (produces D0.5 + D0.6)
-bash scripts/run_clean.sh
+bash scripts/02_run_clean.sh
 
 # 5. Tests
 pytest -v

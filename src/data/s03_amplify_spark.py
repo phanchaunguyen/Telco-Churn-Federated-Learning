@@ -16,7 +16,7 @@ Artifacts produced
 
 Usage
 -----
->>> from src.data.spark_amplify import build_synthetic_spark
+>>> from src.data.s03_amplify_spark import build_synthetic_spark
 >>> df = build_synthetic_spark(n_rows=1_000_000, write=True)
 >>> df.count()
 1000000
@@ -32,14 +32,14 @@ import numpy as np
 import pandas as pd
 
 from src.config import get_config
-from src.data.amplify import (
+from src.data.s03_amplify import (
     MAX_CHURN_RATE_DRIFT,
     fit_copula,
     sample_copula,
     validate_synthetic,
 )
-from src.data.clean import CATEGORICAL_COLS, FEATURE_COLS, TARGET_COL
-from src.data.spark_session import get_spark, stop_spark
+from src.data.s01_clean import CATEGORICAL_COLS, FEATURE_COLS, TARGET_COL
+from src.data.s00_spark_session import get_spark, stop_spark
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +81,7 @@ def build_synthetic_spark(
     src = Path(train_path) if train_path is not None else cfg.paths.train_real_parquet
     if not src.exists():
         raise FileNotFoundError(
-            f"train_real not found: {src}. Run `python -m src.data.split` first."
+            f"train_real not found: {src}. Run `python -m src.data.s02_split` first."
         )
 
     train = pd.read_parquet(src)
@@ -143,7 +143,7 @@ def build_synthetic_spark(
 
 
 def main() -> None:
-    """CLI entry point: ``python -m src.data.spark_amplify``."""
+    """CLI entry point: ``python -m src.data.s03_amplify_spark``."""
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s | %(levelname)-7s | %(name)s | %(message)s",
