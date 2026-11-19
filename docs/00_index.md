@@ -16,8 +16,8 @@
 | **03** | `03_reading_notes_dp.md` | C | W1 | ✅ | Abadi 2016 (DP-SGD) + Opacus |
 | **04** | `04_data_decisions.md` | A | W1 | ✅ | Leakage taxonomy, 29 features, số liệu EDA |
 | **05** | `05_spark_pipeline.md` | A | W2 | ✅ | Spark clean/amplify/partition/eval + benchmark |
-| 06 | `06_synthetic_decision.md` | A+C | W2 | ⬜ | Copula vs CTGAN, chọn primary |
-| 07 | `07_partition_design.md` | A | W3 | ⬜ | IID vs Dirichlet, thiết kế silo |
+| **06** | `06_synthetic_decision.md` | A+C | W2 | ✅ | Copula vs CTGAN, quality gate PASS (TSTR gap 3.7%) |
+| **07** | `07_partition_design.md` | A | W3 | ✅ | IID vs Dirichlet, số liệu thực, silo gate PASS |
 | **08** | `08_kafka_telemetry.md` | B+D | W3–W4 | ✅ | Kafka topics, schema, consumers, live dashboard |
 | 09 | `09_fl_architecture.md` | B | W4 | ⬜ | Flower server/client, strategy |
 | 10 | `10_experiment_protocol.md` | B | W5 | ⬜ | Protocol E0–E7, seed, MLflow tags |

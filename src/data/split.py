@@ -237,5 +237,116 @@ def main() -> None:
     print("=" * 70)
 
 
+# =============================================================================
+# Synthetic split (90/10)
+# =============================================================================
+def split_synthetic(
+    df: pd.DataFrame,
+    *,
+    test_size: float = 0.1,
+    seed: int = 42,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Split the synthetic frame into ``(synth_train, synth_test)``.
+
+    ``synth_train`` is the only input to partitioning. ``synth_test`` exists
+    solely for scale experiments (E6) and as a sanity check (E7); it is never
+    reported as a main result.
+    """
+    if not 0.0 < test_size < 1.0:
+        raise ValueError(f"test_size must be in (0, 1), got {test_size}")
+
+    train, test = train_test_split(
+        df,
+        test_size=test_size,
+        random_state=seed,
+        stratify=df[TARGET_COL],
+        shuffle=True,
+    )
+    train = train.reset_index(drop=True)
+    test = test.reset_index(drop=True)
+
+    logger.info(
+        "Split synthetic %s rows -> synth_train %s / synth_test %s",
+        f"{len(df):,}",
+        f"{len(train):,}",
+        f"{len(test):,}",
+    )
+    return train, test
+
+
+def build_synthetic_split(
+    synthetic_path: str | Path | None = None,
+    *,
+    write: bool = True,
+    out_dir: str | Path | None = None,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Load ``synthetic_1m.parquet``, split 90/10, and optionally write."""
+    cfg = get_config()
+    src_path = (
+        Path(synthetic_path) if synthetic_path is not None else cfg.paths.synthetic_parquet
+    )
+    if not src_path.exists():
+        raise FileNotFoundError(
+            f"Synthetic artifact not found: {src_path}. Run `python -m src.data.amplify` first."
+        )
+
+    df = pd.read_parquet(src_path)
+    logger.info("Loaded %s (%s rows x %s cols)", src_path, *df.shape)
+
+    train, test = split_synthetic(
+        df,
+        test_size=cfg.split.synthetic_test_size,
+        seed=cfg.split.seed,
+    )
+
+    # Invariants
+    assert len(train) + len(test) == len(df), "Synthetic split lost rows"
+    assert not train.isna().any().any(), "synth_train contains NaN"
+    assert not test.isna().any().any(), "synth_test contains NaN"
+    assert set(train[TARGET_COL].unique()) == {0, 1}, "synth_train missing a class"
+    assert set(test[TARGET_COL].unique()) == {0, 1}, "synth_test missing a class"
+
+    if write:
+        target_dir = Path(out_dir) if out_dir is not None else cfg.paths.synthetic_dir
+        target_dir.mkdir(parents=True, exist_ok=True)
+
+        train_path = target_dir / cfg.paths.synth_train_parquet.name
+        test_path = target_dir / cfg.paths.synth_test_parquet.name
+
+        train.to_parquet(train_path, index=False)
+        test.to_parquet(test_path, index=False)
+
+        logger.info("Wrote %s (%s rows x %s cols)", train_path, *train.shape)
+        logger.info("Wrote %s (%s rows x %s cols)", test_path, *test.shape)
+
+    return train, test
+
+
+def main_synthetic() -> None:
+    """CLI entry point: ``python -m src.data.split --synthetic``."""
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s | %(levelname)-7s | %(name)s | %(message)s",
+    )
+    train, test = build_synthetic_split(write=True)
+
+    print("\n" + "=" * 70)
+    print("SYNTHETIC SPLIT COMPLETE")
+    print("=" * 70)
+    print(f"  synth_train.parquet : {train.shape[0]:>9,} rows x {train.shape[1]:>2} cols")
+    print(f"  synth_test.parquet  : {test.shape[0]:>9,} rows x {test.shape[1]:>2} cols")
+    print(f"  synth_train churn   : {train[TARGET_COL].mean():.4f}")
+    print(f"  synth_test churn    : {test[TARGET_COL].mean():.4f}")
+    print("=" * 70)
+    print("  synth_train -> partitioning")
+    print("  synth_test  -> E6/E7 scale experiments ONLY")
+    print("=" * 70)
+
+
 if __name__ == "__main__":
-    main()
+    import sys
+
+    if "--synthetic" in sys.argv:
+        main_synthetic()
+    else:
+        main()
