@@ -42,7 +42,15 @@ class PathsCfg(BaseModel):
     results_dir: Path
     eda_parquet: Path
     clean_parquet: Path
+    train_real_parquet: Path
+    test_real_parquet: Path
     synthetic_parquet: Path
+    synth_train_parquet: Path
+    synth_test_parquet: Path
+    ctgan_parquet: Path
+    quality_report: Path
+    partition_metadata: Path
+    silo_verification: Path
 
     def resolve_all(self) -> "PathsCfg":
         """Return a copy with every path made absolute against ``REPO_ROOT``."""
@@ -51,6 +59,20 @@ class PathsCfg(BaseModel):
             for name, p in self.model_dump().items()
         }
         return PathsCfg(**data)
+
+
+class SplitCfg(BaseModel):
+    """Stratified split configuration.
+
+    ``test_real`` is the PRIMARY evaluation set and must never be amplified
+    or partitioned.
+    """
+
+    test_size: float = 0.2
+    seed: int = 42
+    stratify_on: str = "churn"
+    n_folds: int = 5
+    synthetic_test_size: float = 0.1
 
 
 class QualityGateCfg(BaseModel):
@@ -141,6 +163,7 @@ class Config(BaseModel):
     project: ProjectCfg = Field(default_factory=ProjectCfg)
     paths: PathsCfg
     data: DataCfg = Field(default_factory=DataCfg)
+    split: SplitCfg = Field(default_factory=SplitCfg)
     amplification: AmplificationCfg = Field(default_factory=AmplificationCfg)
     partitioning: PartitioningCfg = Field(default_factory=PartitioningCfg)
     model: ModelCfg = Field(default_factory=ModelCfg)

@@ -17,7 +17,26 @@ paths:
   results_dir: results
   eda_parquet: data/processed/eda_7043.parquet
   clean_parquet: data/processed/clean_7043.parquet
+  train_real_parquet: data/processed/train_real.parquet
+  test_real_parquet: data/processed/test_real.parquet
   synthetic_parquet: data/synthetic/synthetic_1m.parquet
+  synth_train_parquet: data/synthetic/synth_train.parquet
+  synth_test_parquet: data/synthetic/synth_test.parquet
+  ctgan_parquet: data/synthetic/ctgan_1m.parquet
+  quality_report: data/synthetic/quality_report.json
+  partition_metadata: results/partition_metadata.json
+  silo_verification: results/silo_verification.json
+
+# -----------------------------------------------------------------------------
+# Splitting — test_real is the PRIMARY evaluation set and must NEVER be
+# amplified or partitioned. See docs/12_architecture.md section 2.
+# -----------------------------------------------------------------------------
+split:
+  test_size: 0.2
+  seed: 42
+  stratify_on: churn
+  n_folds: 5              # E1 uses 5-fold CV; E2-E7 use fold 0
+  synthetic_test_size: 0.1
 
 # -----------------------------------------------------------------------------
 # Data cleaning
