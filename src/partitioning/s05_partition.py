@@ -187,17 +187,29 @@ def validate_partitions(
         )
 
     if strategy == "iid":
-        # The spread across clients is sampling noise, so the tolerance must
-        # scale with the per-client sample size. A fixed threshold would pass
-        # on 90k-row silos and fail on small test fixtures for no real reason.
-        # Allow 4 binomial standard errors of the pooled churn rate.
+        # The spread across clients is pure sampling noise, so the tolerance
+        # must scale with both the per-client sample size and the number of
+        # clients. Two things make a fixed threshold wrong:
+        #
+        #   1. Smaller silos have larger binomial standard error.
+        #   2. The max-minus-min of k samples grows with k even when every
+        #      sample is drawn from the same distribution. For k=10 the
+        #      expected range is about 3.1 SE and the 99.9th percentile is
+        #      about 4.5 SE, so a 4 SE bound rejects a correct partitioner
+        #      roughly one run in a hundred.
+        #
+        # The bound below is 5 SE with a 0.02 floor. At 90k rows per client
+        # that is ~13 SE, which no correct partitioner would ever exceed, so
+        # the check still catches real bugs (a client receiving a wildly
+        # different churn rate) while tolerating normal variation.
         pooled = float(df[TARGET_COL].mean())
         se = float(np.sqrt(pooled * (1 - pooled) / max(sizes.min(), 1)))
-        tolerance = max(4 * se, 0.01)
+        tolerance = max(5 * se, 0.02)
         spread = max(churn_rates) - min(churn_rates)
         assert spread < tolerance, (
             f"IID churn-rate spread {spread:.4f} exceeds tolerance {tolerance:.4f} "
-            f"(pooled {pooled:.4f}, min client size {int(sizes.min())})"
+            f"(pooled {pooled:.4f}, min client size {int(sizes.min())}, "
+            f"binomial SE {se:.4f})"
         )
 
     metadata = {
