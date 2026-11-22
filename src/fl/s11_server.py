@@ -214,6 +214,7 @@ def run_sequential(
     num_clients: int | None = None,
     strategy_name: str = "fedavg",
     partition: str = "iid",
+    partition_dir: str | Path | None = None,
     fraction_fit: float | None = None,
     seed: int | None = None,
 ) -> dict[str, Any]:
@@ -230,6 +231,17 @@ def run_sequential(
     are comparable. Switch to ``run_simulation`` (Ray) only for E6, where
     K=50 makes sequential execution too slow.
 
+    Parameters
+    ----------
+    partition:
+        Short name resolved as ``data/synthetic/partitions_{partition}``.
+        Ignored when ``partition_dir`` is given.
+    partition_dir:
+        Explicit path to a directory holding ``client_{i}.parquet``. Use this
+        for fold-specific partitions, which live under
+        ``data/synthetic/fold_{i}/partitions_iid`` and do not follow the
+        ``partitions_*`` naming convention.
+
     Returns
     -------
     dict
@@ -243,7 +255,11 @@ def run_sequential(
     rounds = n_rounds if n_rounds is not None else cfg.fl.n_rounds
     k = num_clients if num_clients is not None else cfg.partitioning.n_clients
     frac = fraction_fit if fraction_fit is not None else cfg.fl.fraction_fit
-    part_dir = cfg.paths.synthetic_dir / f"partitions_{partition}"
+
+    if partition_dir is not None:
+        part_dir = Path(partition_dir)
+    else:
+        part_dir = cfg.paths.synthetic_dir / f"partitions_{partition}"
 
     if not part_dir.exists():
         raise FileNotFoundError(f"Partition directory not found: {part_dir}")

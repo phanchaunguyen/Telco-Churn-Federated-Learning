@@ -206,7 +206,7 @@ def run_fold(
         n_rounds=rounds,
         num_clients=cfg.partitioning.n_clients,
         strategy_name="fedavg",
-        partition=f"fold_{fold_id}/partitions_iid" if fold_id else "iid",
+        partition_dir=paths["partition_dir"],
         seed=seed,
     )
 
@@ -219,7 +219,7 @@ def run_fold(
     # --- 3. Local-only ----------------------------------------------------
     logger.info("[3/3] Local-only baseline")
     local_df = train_local_only(
-        partition=f"fold_{fold_id}/partitions_iid" if fold_id else "iid",
+        partition_dir=paths["partition_dir"],
         n_epochs=rounds,
         seed=seed,
         vocab=vocab,

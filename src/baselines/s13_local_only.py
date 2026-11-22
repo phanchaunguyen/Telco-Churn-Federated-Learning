@@ -116,6 +116,7 @@ def train_one_client(
 def train_local_only(
     *,
     partition: str = "iid",
+    partition_dir: str | Path | None = None,
     n_epochs: int | None = None,
     batch_size: int | None = None,
     learning_rate: float | None = None,
@@ -128,7 +129,12 @@ def train_local_only(
     Parameters
     ----------
     partition:
-        Sub-directory under ``data/synthetic`` holding the silos.
+        Short name resolved as ``data/synthetic/partitions_{partition}``.
+        Ignored when ``partition_dir`` is given.
+    partition_dir:
+        Explicit path to a directory holding ``client_{i}.parquet``. Use this
+        for fold-specific partitions, which live under
+        ``data/synthetic/fold_{i}/partitions_iid``.
     n_epochs:
         Defaults to 50, matching the FL total.
     write:
@@ -147,7 +153,11 @@ def train_local_only(
     torch_seed = seed if seed is not None else cfg.project.seed
     k = cfg.partitioning.n_clients
 
-    part_dir = cfg.paths.synthetic_dir / f"partitions_{partition}"
+    if partition_dir is not None:
+        part_dir = Path(partition_dir)
+    else:
+        part_dir = cfg.paths.synthetic_dir / f"partitions_{partition}"
+
     if not part_dir.exists():
         raise FileNotFoundError(f"Partition directory not found: {part_dir}")
 
@@ -192,13 +202,16 @@ def train_local_only(
     )
 
     if write:
-        out = cfg.paths.results_dir / f"E1_local_only_{partition}.csv"
+        # Name the output after the actual directory so fold-specific runs do
+        # not overwrite each other.
+        tag = part_dir.name if partition_dir is not None else partition
+        out = cfg.paths.results_dir / f"E1_local_only_{tag}.csv"
         out.parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(out, index=False)
         logger.info("Wrote %s", out)
 
         summary = {
-            "partition": partition,
+            "partition": tag,
             "n_clients": k,
             "n_epochs": epochs,
             "auc_mean": float(df["auc"].mean()),
@@ -208,7 +221,7 @@ def train_local_only(
             "f1_mean": float(df["f1"].mean()),
             "recall_at_10pct_mean": float(df["recall_at_10pct"].mean()),
         }
-        summary_path = cfg.paths.results_dir / f"E1_local_only_{partition}_summary.json"
+        summary_path = cfg.paths.results_dir / f"E1_local_only_{tag}_summary.json"
         summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
         logger.info("Wrote %s", summary_path)
 
