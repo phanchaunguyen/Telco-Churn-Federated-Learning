@@ -216,6 +216,7 @@ def run_sequential(
     partition: str = "iid",
     partition_dir: str | Path | None = None,
     fraction_fit: float | None = None,
+    noise_multiplier: float = 0.0,
     seed: int | None = None,
 ) -> dict[str, Any]:
     """Run FedAvg rounds sequentially, without Ray.
@@ -241,6 +242,9 @@ def run_sequential(
         for fold-specific partitions, which live under
         ``data/synthetic/fold_{i}/partitions_iid`` and do not follow the
         ``partitions_*`` naming convention.
+    noise_multiplier:
+        DP-SGD noise scale applied on every client. ``0.0`` (default) is
+        non-private FedAvg.
 
     Returns
     -------
@@ -273,7 +277,13 @@ def run_sequential(
 
     # Build every client once; they hold their silo in memory for the whole run
     clients = [
-        TelcoClient(cid, part_dir, vocab, proximal_mu=proximal_mu_for(strategy_name))
+        TelcoClient(
+            cid,
+            part_dir,
+            vocab,
+            proximal_mu=proximal_mu_for(strategy_name),
+            noise_multiplier=noise_multiplier,
+        )
         for cid in range(k)
     ]
 
@@ -284,6 +294,7 @@ def run_sequential(
     aucs: list[tuple[int, float]] = []
     momentum: list[np.ndarray] | None = None
     beta = cfg.fl.strategies.fedavgm.server_momentum
+    lr = cfg.fl.strategies.fedavgm.server_learning_rate
 
     logger.info(
         "Sequential simulation: strategy=%s partition=%s rounds=%s clients=%s "
@@ -314,16 +325,27 @@ def run_sequential(
         ]
 
         if strategy_name == "fedavgm":
-            # Server momentum: v = beta * v + delta, W = W + v
-            delta = [a - g for a, g in zip(aggregated, global_weights, strict=True)]
+            # Server-side SGD with momentum, matching Flower's FedAvgM:
+            #   pseudo_gradient = W_global - W_aggregated   (updates are the
+            #                                                 opposite of grads)
+            #   v = beta * v + pseudo_gradient
+            #   W_global = W_global - lr * v
+            #
+            # The learning rate is not cosmetic. Momentum turns the update into
+            # a geometric series with steady-state gain lr / (1 - beta), so
+            # lr=1.0 with beta=0.9 amplifies every round 10x and the run
+            # diverges after ~40 rounds. lr=0.1 keeps the gain at 1.0.
+            pseudo_gradient = [
+                g - a for g, a in zip(global_weights, aggregated, strict=True)
+            ]
             if momentum is None:
-                momentum = delta
+                momentum = pseudo_gradient
             else:
                 momentum = [
-                    beta * m + d for m, d in zip(momentum, delta, strict=True)
+                    beta * m + p for m, p in zip(momentum, pseudo_gradient, strict=True)
                 ]
             global_weights = [
-                g + m for g, m in zip(global_weights, momentum, strict=True)
+                g - lr * m for g, m in zip(global_weights, momentum, strict=True)
             ]
         else:
             global_weights = aggregated
@@ -350,6 +372,7 @@ def run_sequential(
         "n_selected_per_round": n_selected,
         "losses_distributed": losses,
         "metrics_distributed": {"auc": aucs},
+        "epsilons": [c.epsilon for c in clients],
         "final_weights": global_weights,
         "input_dim": input_dim,
     }

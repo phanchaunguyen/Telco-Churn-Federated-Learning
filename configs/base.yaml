@@ -106,6 +106,9 @@ fl:
       proximal_mu: 0.01
     fedavgm:
       server_momentum: 0.9
+      # Steady-state gain is lr / (1 - beta). At lr=1.0 and beta=0.9 that is
+      # 10x per round, which diverges after ~40 rounds; 0.1 keeps it at 1.0.
+      server_learning_rate: 0.1
 
 # -----------------------------------------------------------------------------
 # Differential privacy

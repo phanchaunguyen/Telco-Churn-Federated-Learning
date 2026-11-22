@@ -32,7 +32,7 @@ from typing import Any, Callable
 import numpy as np
 import pandas as pd
 import torch
-from sklearn.metrics import f1_score, roc_auc_score
+from sklearn.metrics import average_precision_score, f1_score, roc_auc_score
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +85,7 @@ def evaluate_model(
     *,
     threshold: float = 0.5,
 ) -> dict[str, float]:
-    """Compute AUC, F1, and Recall@10% for a model on a labelled set.
+    """Compute AUC, PR-AUC, F1, and Recall@10% for a model on a labelled set.
 
     Parameters
     ----------
@@ -95,20 +95,31 @@ def evaluate_model(
         Features and labels. ``X`` must already be scaled the same way the
         model was trained.
     threshold:
-        Decision threshold for F1. AUC and Recall@10% are threshold-free.
+        Decision threshold for F1. AUC, PR-AUC, and Recall@10% are
+        threshold-free.
 
     Returns
     -------
     dict
-        ``{auc, f1, recall_at_10pct, n_samples, n_churned}``
+        ``{auc, pr_auc, f1, recall_at_10pct, n_samples, n_churned}``
+
+    Notes
+    -----
+    ``pr_auc`` (average precision) is the metric to read on this dataset. At a
+    28% churn rate a model can be well calibrated below 0.5 everywhere and
+    still rank perfectly, which makes ``f1`` at the default threshold collapse
+    to 0 even though the model is fine. PR-AUC has no threshold, so it measures
+    ranking quality on the minority class directly.
     """
     y_score = predict_proba(model, X)
     y_true = np.asarray(y)
 
     if len(np.unique(y_true)) < 2:
         auc = float("nan")
+        pr_auc = float("nan")
     else:
         auc = float(roc_auc_score(y_true, y_score))
+        pr_auc = float(average_precision_score(y_true, y_score))
 
     y_pred = (y_score >= threshold).astype(int)
     f1 = float(f1_score(y_true, y_pred, zero_division=0))
@@ -116,6 +127,7 @@ def evaluate_model(
 
     return {
         "auc": auc,
+        "pr_auc": pr_auc,
         "f1": f1,
         "recall_at_10pct": recall10,
         "n_samples": int(len(y_true)),
@@ -191,13 +203,16 @@ def evaluate_with_ci(
     n_resamples: int = DEFAULT_N_RESAMPLES,
     seed: int = 42,
 ) -> dict[str, Any]:
-    """Evaluate a model and attach bootstrap CIs for AUC and Recall@10%."""
+    """Evaluate a model and attach bootstrap CIs for AUC, PR-AUC, and Recall@10%."""
     metrics = evaluate_model(model, X, y)
     y_score = predict_proba(model, X)
     y_true = np.asarray(y)
 
     auc_lo, auc_hi = bootstrap_ci(
         y_true, y_score, roc_auc_score, n_resamples=n_resamples, seed=seed
+    )
+    pr_lo, pr_hi = bootstrap_ci(
+        y_true, y_score, average_precision_score, n_resamples=n_resamples, seed=seed
     )
     rec_lo, rec_hi = bootstrap_ci(
         y_true,
@@ -210,6 +225,8 @@ def evaluate_with_ci(
     metrics.update({
         "auc_ci_lower": auc_lo,
         "auc_ci_upper": auc_hi,
+        "pr_auc_ci_lower": pr_lo,
+        "pr_auc_ci_upper": pr_hi,
         "recall_at_10pct_ci_lower": rec_lo,
         "recall_at_10pct_ci_upper": rec_hi,
     })

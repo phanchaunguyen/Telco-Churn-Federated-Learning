@@ -121,6 +121,10 @@ class FedProxCfg(BaseModel):
 
 class FedAvgMCfg(BaseModel):
     server_momentum: float = 0.9
+    # Server-side SGD step size. With momentum beta the steady-state gain is
+    # lr / (1 - beta), so lr=1.0 and beta=0.9 amplify each round's update 10x
+    # and the run diverges after ~40 rounds. 0.1 keeps the gain at 1.0.
+    server_learning_rate: float = 0.1
 
 
 class StrategiesCfg(BaseModel):

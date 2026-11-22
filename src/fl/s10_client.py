@@ -60,6 +60,8 @@ class TelcoClient(NumPyClient):
         weight tensors have different shapes and FedAvg cannot average them.
     proximal_mu:
         FedProx coefficient. ``0.0`` is plain FedAvg.
+    noise_multiplier:
+        DP-SGD noise scale. ``0.0`` (default) is non-private training.
     """
 
     def __init__(
@@ -69,11 +71,13 @@ class TelcoClient(NumPyClient):
         vocab: Vocabulary,
         *,
         proximal_mu: float = 0.0,
+        noise_multiplier: float = 0.0,
     ) -> None:
         self.client_id = client_id
         self.partition_dir = Path(partition_dir)
         self.vocab = vocab
         self.proximal_mu = proximal_mu
+        self.noise_multiplier = noise_multiplier
 
         X, y, scaler = load_client(self.partition_dir, client_id, vocab)
         self.X = X
@@ -86,6 +90,7 @@ class TelcoClient(NumPyClient):
             y,
             input_dim=self.input_dim,
             proximal_mu=proximal_mu,
+            noise_multiplier=noise_multiplier,
         )
         logger.info(
             "TelcoClient %s ready: %s samples, %s features, churn %.4f",
@@ -129,6 +134,12 @@ class TelcoClient(NumPyClient):
         return result.weights, result.n_samples, result.to_metrics()
 
     # -------------------------------------------------------------------------
+    @property
+    def epsilon(self) -> float:
+        """Privacy budget spent by this client so far (0 when non-private)."""
+        return self.trainer.epsilon
+
+    # -------------------------------------------------------------------------
     def evaluate(
         self,
         parameters: list[np.ndarray],
@@ -151,6 +162,7 @@ def make_client(
     vocab: Vocabulary | None = None,
     *,
     proximal_mu: float = 0.0,
+    noise_multiplier: float = 0.0,
 ) -> TelcoClient:
     """Build a client, filling defaults from the config and IID partition."""
     cfg = get_config()
@@ -168,6 +180,7 @@ def make_client(
         partition_dir,
         vocab,
         proximal_mu=proximal_mu,
+        noise_multiplier=noise_multiplier,
     )
 
 
@@ -176,6 +189,7 @@ def client_fn_factory(
     vocab: Vocabulary,
     *,
     proximal_mu: float = 0.0,
+    noise_multiplier: float = 0.0,
 ):
     """Return a ``client_fn(cid)`` suitable for ``fl.client.start_client``."""
     if not _HAS_FLOWER:
@@ -187,6 +201,7 @@ def client_fn_factory(
             partition_dir,
             vocab,
             proximal_mu=proximal_mu,
+            noise_multiplier=noise_multiplier,
         ).to_client()
 
     return client_fn

@@ -76,6 +76,14 @@ class LocalTrainer:
         Override the config defaults.
     proximal_mu:
         FedProx coefficient. ``0.0`` (default) is plain FedAvg local training.
+    noise_multiplier:
+        DP-SGD noise scale. ``0.0`` (default) disables differential privacy
+        entirely, so the non-private path is byte-identical to plain FedAvg.
+        Any positive value wraps the model, optimizer, and data loader with
+        Opacus' ``PrivacyEngine``.
+    max_grad_norm:
+        DP-SGD per-sample gradient clipping bound. Ignored when
+        ``noise_multiplier == 0``.
     seed:
         Torch seed for reproducible dropout and weight init.
     """
@@ -90,6 +98,8 @@ class LocalTrainer:
         learning_rate: float | None = None,
         local_epochs: int | None = None,
         proximal_mu: float = 0.0,
+        noise_multiplier: float = 0.0,
+        max_grad_norm: float | None = None,
         seed: int | None = None,
     ) -> None:
         if X.shape[1] != input_dim:
@@ -107,11 +117,20 @@ class LocalTrainer:
         self.learning_rate = learning_rate or cfg.fl.learning_rate
         self.local_epochs = local_epochs or cfg.fl.local_epochs
         self.proximal_mu = proximal_mu
+        self.noise_multiplier = noise_multiplier
+        self.max_grad_norm = (
+            max_grad_norm if max_grad_norm is not None else cfg.privacy.max_grad_norm
+        )
         self.seed = seed if seed is not None else cfg.project.seed
 
         torch.manual_seed(self.seed)
         self.model = build_model(input_dim, seed=self.seed)
         self.criterion = nn.BCELoss()
+
+        # Epsilon accumulated across every fit() call on this client. DP-SGD
+        # composes over rounds, so the accountant must live on the trainer.
+        self.epsilon: float = 0.0
+        self._privacy_engine: Any = None
 
         self._dataset = TensorDataset(
             torch.from_numpy(X).float(),
@@ -179,20 +198,29 @@ class LocalTrainer:
         optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
         n_epochs = epochs if epochs is not None else self.local_epochs
 
+        loader = self._loader()
+        train_model: Any = self.model
+        train_optimizer: Any = optimizer
+
+        if self.noise_multiplier > 0:
+            train_model, train_optimizer, loader = self._make_private(
+                optimizer, loader
+            )
+
         running_loss = 0.0
         n_batches = 0
 
         for _ in range(n_epochs):
-            for xb, yb in self._loader():
-                optimizer.zero_grad()
-                proba = self.model(xb)
+            for xb, yb in loader:
+                train_optimizer.zero_grad()
+                proba = train_model(xb)
                 loss = self.criterion(proba, yb)
 
                 if anchor is not None:
                     loss = loss + self._proximal_term(anchor)
 
                 loss.backward()
-                optimizer.step()
+                train_optimizer.step()
 
                 running_loss += float(loss.item())
                 n_batches += 1
@@ -202,6 +230,14 @@ class LocalTrainer:
         weights = get_weights(self.model)
         duration = time.perf_counter() - t0
 
+        if self.noise_multiplier > 0:
+            # The accountant composes over every step taken so far, so epsilon
+            # must be read after the loop, not when the engine is created.
+            self.epsilon = float(
+                self._privacy_engine.get_epsilon(delta=get_config().privacy.delta)
+            )
+            self._release_hooks()
+
         result = TrainResult(
             weights=weights,
             n_samples=len(self.X),
@@ -209,15 +245,79 @@ class LocalTrainer:
             auc=auc,
             duration_sec=duration,
             bytes_sent=sum(w.nbytes for w in weights),
+            extra={"epsilon": self.epsilon} if self.noise_multiplier > 0 else {},
         )
         logger.info(
-            "Local fit: n=%s loss=%.4f auc=%.4f in %.2fs",
+            "Local fit: n=%s loss=%.4f auc=%.4f in %.2fs%s",
             f"{result.n_samples:,}",
             result.loss,
             result.auc,
             result.duration_sec,
+            f" eps={self.epsilon:.3f}" if self.noise_multiplier > 0 else "",
         )
         return result
+
+    # -------------------------------------------------------------------------
+    def _make_private(
+        self,
+        optimizer: torch.optim.Optimizer,
+        loader: DataLoader,
+    ) -> tuple[Any, Any, DataLoader]:
+        """Wrap model/optimizer/loader with Opacus DP-SGD.
+
+        Opacus replaces the data loader with a Poisson-sampled one, so the
+        returned loader must be iterated instead of ``self._loader()``. The
+        wrapped module keeps a reference to the original under ``_module``,
+        which is what ``get_weights`` reads, so the weights that leave the
+        client are the same tensors the server expects.
+
+        Opacus registers backward hooks on the module to capture per-sample
+        gradients. Those hooks are not removed when the wrapper goes out of
+        scope, so a second ``fit()`` on the same trainer would raise
+        ``Trying to add hooks twice to the same model``. The hooks are removed
+        at the end of every private fit (see ``_release_hooks``).
+        """
+        try:
+            from opacus import PrivacyEngine
+        except ImportError as exc:  # pragma: no cover
+            raise ImportError(
+                "opacus is required for DP-SGD; install with `pip install opacus`"
+            ) from exc
+
+        if self._privacy_engine is None:
+            self._privacy_engine = PrivacyEngine()
+
+        private_model, private_optimizer, private_loader = (
+            self._privacy_engine.make_private(
+                module=self.model,
+                optimizer=optimizer,
+                criterion=self.criterion,
+                data_loader=loader,
+                noise_multiplier=self.noise_multiplier,
+                max_grad_norm=self.max_grad_norm,
+            )
+        )
+        self._private_model = private_model
+        # Epsilon is deliberately not read here: the accountant has no steps
+        # yet and returns NaN. ``fit`` reads it after the training loop.
+        return private_model, private_optimizer, private_loader
+
+    # -------------------------------------------------------------------------
+    def _release_hooks(self) -> None:
+        """Remove Opacus' per-sample gradient hooks from the base module.
+
+        Without this, the next ``fit()`` call fails because the hooks are still
+        attached to ``self.model``. The accountant is kept so epsilon keeps
+        composing across rounds.
+        """
+        private_model = getattr(self, "_private_model", None)
+        if private_model is None:
+            return
+        try:
+            private_model.remove_hooks()
+        except Exception:  # pragma: no cover - defensive, hooks may be absent
+            logger.debug("Opacus hook removal failed; continuing", exc_info=True)
+        self._private_model = None
 
     # -------------------------------------------------------------------------
     def _proximal_term(self, anchor: list[torch.Tensor]) -> torch.Tensor:

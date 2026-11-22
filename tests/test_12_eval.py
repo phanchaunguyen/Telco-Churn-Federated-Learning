@@ -125,7 +125,37 @@ def test_evaluate_model_f1_respects_threshold(perfect_data) -> None:
 def test_evaluate_model_returns_all_keys(perfect_data) -> None:
     y, scores = perfect_data
     metrics = evaluate_model(_FixedModel(scores), np.zeros((len(y), 1)), y)
-    assert set(metrics) == {"auc", "f1", "recall_at_10pct", "n_samples", "n_churned"}
+    assert set(metrics) == {
+        "auc",
+        "pr_auc",
+        "f1",
+        "recall_at_10pct",
+        "n_samples",
+        "n_churned",
+    }
+
+
+def test_evaluate_model_pr_auc_is_one_for_perfect_ranking(perfect_data) -> None:
+    """Perfect separation must give PR-AUC 1.0, same as AUC."""
+    y, scores = perfect_data
+    metrics = evaluate_model(_FixedModel(scores), np.zeros((len(y), 1)), y)
+    assert metrics["pr_auc"] == pytest.approx(1.0)
+
+
+def test_evaluate_model_pr_auc_beats_f1_when_scores_are_low() -> None:
+    """PR-AUC must stay high when every score sits below the F1 threshold.
+
+    This is the regression that motivated adding PR-AUC: at a 28% churn rate a
+    well-ranked model can output probabilities below 0.5 everywhere, so F1 at
+    the default threshold collapses to 0 while the ranking is still perfect.
+    """
+    y = np.array([0, 0, 0, 0, 1, 1, 1, 1])
+    scores = np.array([0.01, 0.02, 0.03, 0.04, 0.06, 0.07, 0.08, 0.09])
+    metrics = evaluate_model(_FixedModel(scores), np.zeros((len(y), 1)), y)
+
+    assert metrics["f1"] == pytest.approx(0.0)
+    assert metrics["pr_auc"] == pytest.approx(1.0)
+    assert metrics["auc"] == pytest.approx(1.0)
 
 
 # ---------------------------------------------------------------------------
