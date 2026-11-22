@@ -20,7 +20,7 @@
 | **07** | `07_partition_design.md` | A | W3 | ✅ | IID vs Dirichlet, số liệu thực, silo gate PASS |
 | **08** | `08_kafka_telemetry.md` | B+D | W3–W4 | ✅ | Kafka topics, schema, consumers, live dashboard |
 | **09** | `09_fl_architecture.md` | B | W4 | ✅ | **GroupNorm rationale, FL stack, 1 round milestone** |
-| 10 | `10_experiment_protocol.md` | B | W5 | ⬜ | Protocol E0–E7, seed, MLflow tags |
+| **10** | `10_experiment_protocol.md` | B | W5 | ✅ | **Protocol E0–E7, quyết định scaler, fold protocol** |
 | 11 | `11_integration_log.md` | All | W10 | ⬜ | Log tích hợp end-to-end |
 | **12** | `12_architecture.md` | All | W1 | ✅ | **Sơ đồ Mermaid: 4 layers, data pipeline, FL round, experiment protocol, non-overlap** |
 | **13** | `13_layer1_plan.md` | A | W2–W3 | 🚧 | **Kế hoạch hoàn thành Layer 1: 9 phases, 12 artifacts, 8 commits** |
