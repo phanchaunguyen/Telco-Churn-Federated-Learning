@@ -1,0 +1,4 @@
+n_rows,mode,driver_memory,shuffle_partitions,clean_sec,amplify_sec,partition_sec,total_sec,total_min,under_15min
+10000,local[*],6g,8,3.25,3.48,3.49,10.22,0.17,True
+100000,local[*],6g,8,0.22,1.99,4.85,7.06,0.12,True
+1000000,local[*],6g,8,0.15,8.52,14.53,23.2,0.39,True

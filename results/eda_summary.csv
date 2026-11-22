@@ -1,0 +1,11 @@
+metric,value
+Raw shape,"7,043 x 50"
+Joined rows dropped,454 (6.45%)
+Cohort after drop,"6,589"
+Churn rate (clean cohort),28.37%
+Churned / Stayed,"1,869 / 4,720"
+Features kept,29 (5 demo + 6 account + 12 services + 6 usage)
+Columns dropped,20 (Loại 1-6)
+E0 — IBM Churn Score AUC,0.9421
+Churn Category strata,5
+Zero-variance columns,3

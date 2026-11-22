@@ -1,0 +1,319 @@
+{
+  "passed": true,
+  "expected_total_rows": 900000,
+  "expected_feature_count": 29,
+  "expected_columns": [
+    "Customer ID",
+    "Gender",
+    "Age",
+    "Senior Citizen",
+    "Married",
+    "Number of Dependents",
+    "Tenure in Months",
+    "Offer",
+    "Contract",
+    "Paperless Billing",
+    "Payment Method",
+    "Number of Referrals",
+    "Phone Service",
+    "Multiple Lines",
+    "Internet Service",
+    "Internet Type",
+    "Online Security",
+    "Online Backup",
+    "Device Protection Plan",
+    "Premium Tech Support",
+    "Streaming TV",
+    "Streaming Movies",
+    "Streaming Music",
+    "Unlimited Data",
+    "Avg Monthly Long Distance Charges",
+    "Avg Monthly GB Download",
+    "Monthly Charge",
+    "Total Charges",
+    "Total Extra Data Charges",
+    "Total Long Distance Charges",
+    "churn"
+  ],
+  "strategies": {
+    "iid": {
+      "partition_dir": "/home/pcn/261/big_data/source/data/synthetic/partitions_iid",
+      "k": 10,
+      "total_rows": 900000,
+      "unique_ids": 900000,
+      "churn_rate_min": 0.281922,
+      "churn_rate_max": 0.287211,
+      "churn_rate_std": 0.001815,
+      "per_client": [
+        {
+          "client_id": 0,
+          "n_rows": 90000,
+          "n_churned": 25565,
+          "churn_rate": 0.284056,
+          "n_features": 29,
+          "n_nan": 0
+        },
+        {
+          "client_id": 1,
+          "n_rows": 90000,
+          "n_churned": 25459,
+          "churn_rate": 0.282878,
+          "n_features": 29,
+          "n_nan": 0
+        },
+        {
+          "client_id": 2,
+          "n_rows": 90000,
+          "n_churned": 25521,
+          "churn_rate": 0.283567,
+          "n_features": 29,
+          "n_nan": 0
+        },
+        {
+          "client_id": 3,
+          "n_rows": 90000,
+          "n_churned": 25578,
+          "churn_rate": 0.2842,
+          "n_features": 29,
+          "n_nan": 0
+        },
+        {
+          "client_id": 4,
+          "n_rows": 90000,
+          "n_churned": 25849,
+          "churn_rate": 0.287211,
+          "n_features": 29,
+          "n_nan": 0
+        },
+        {
+          "client_id": 5,
+          "n_rows": 90000,
+          "n_churned": 25448,
+          "churn_rate": 0.282756,
+          "n_features": 29,
+          "n_nan": 0
+        },
+        {
+          "client_id": 6,
+          "n_rows": 90000,
+          "n_churned": 25451,
+          "churn_rate": 0.282789,
+          "n_features": 29,
+          "n_nan": 0
+        },
+        {
+          "client_id": 7,
+          "n_rows": 90000,
+          "n_churned": 25820,
+          "churn_rate": 0.286889,
+          "n_features": 29,
+          "n_nan": 0
+        },
+        {
+          "client_id": 8,
+          "n_rows": 90000,
+          "n_churned": 25423,
+          "churn_rate": 0.282478,
+          "n_features": 29,
+          "n_nan": 0
+        },
+        {
+          "client_id": 9,
+          "n_rows": 90000,
+          "n_churned": 25373,
+          "churn_rate": 0.281922,
+          "n_features": 29,
+          "n_nan": 0
+        }
+      ],
+      "errors": [],
+      "passed": true
+    },
+    "label_skew_a0.5": {
+      "partition_dir": "/home/pcn/261/big_data/source/data/synthetic/partitions_label_skew_a0.5",
+      "k": 10,
+      "total_rows": 900000,
+      "unique_ids": 900000,
+      "churn_rate_min": 0.013782,
+      "churn_rate_max": 0.870291,
+      "churn_rate_std": 0.325359,
+      "per_client": [
+        {
+          "client_id": 0,
+          "n_rows": 31445,
+          "n_churned": 5606,
+          "churn_rate": 0.17828,
+          "n_features": 29,
+          "n_nan": 0
+        },
+        {
+          "client_id": 1,
+          "n_rows": 89767,
+          "n_churned": 4915,
+          "churn_rate": 0.054753,
+          "n_features": 29,
+          "n_nan": 0
+        },
+        {
+          "client_id": 2,
+          "n_rows": 34359,
+          "n_churned": 22208,
+          "churn_rate": 0.646352,
+          "n_features": 29,
+          "n_nan": 0
+        },
+        {
+          "client_id": 3,
+          "n_rows": 65032,
+          "n_churned": 4915,
+          "churn_rate": 0.075578,
+          "n_features": 29,
+          "n_nan": 0
+        },
+        {
+          "client_id": 4,
+          "n_rows": 356622,
+          "n_churned": 4915,
+          "churn_rate": 0.013782,
+          "n_features": 29,
+          "n_nan": 0
+        },
+        {
+          "client_id": 5,
+          "n_rows": 38278,
+          "n_churned": 26127,
+          "churn_rate": 0.682559,
+          "n_features": 29,
+          "n_nan": 0
+        },
+        {
+          "client_id": 6,
+          "n_rows": 101224,
+          "n_churned": 64002,
+          "churn_rate": 0.632281,
+          "n_features": 29,
+          "n_nan": 0
+        },
+        {
+          "client_id": 7,
+          "n_rows": 93679,
+          "n_churned": 81528,
+          "churn_rate": 0.870291,
+          "n_features": 29,
+          "n_nan": 0
+        },
+        {
+          "client_id": 8,
+          "n_rows": 41280,
+          "n_churned": 29129,
+          "churn_rate": 0.705644,
+          "n_features": 29,
+          "n_nan": 0
+        },
+        {
+          "client_id": 9,
+          "n_rows": 48314,
+          "n_churned": 12142,
+          "churn_rate": 0.251314,
+          "n_features": 29,
+          "n_nan": 0
+        }
+      ],
+      "errors": [],
+      "passed": true
+    },
+    "label_skew_a0.1": {
+      "partition_dir": "/home/pcn/261/big_data/source/data/synthetic/partitions_label_skew_a0.1",
+      "k": 10,
+      "total_rows": 900000,
+      "unique_ids": 900000,
+      "churn_rate_min": 0.008742,
+      "churn_rate_max": 0.912337,
+      "churn_rate_std": 0.293931,
+      "per_client": [
+        {
+          "client_id": 0,
+          "n_rows": 15955,
+          "n_churned": 4646,
+          "churn_rate": 0.291194,
+          "n_features": 29,
+          "n_nan": 0
+        },
+        {
+          "client_id": 1,
+          "n_rows": 31885,
+          "n_churned": 4646,
+          "churn_rate": 0.145711,
+          "n_features": 29,
+          "n_nan": 0
+        },
+        {
+          "client_id": 2,
+          "n_rows": 15955,
+          "n_churned": 4646,
+          "churn_rate": 0.291194,
+          "n_features": 29,
+          "n_nan": 0
+        },
+        {
+          "client_id": 3,
+          "n_rows": 17891,
+          "n_churned": 6582,
+          "churn_rate": 0.367894,
+          "n_features": 29,
+          "n_nan": 0
+        },
+        {
+          "client_id": 4,
+          "n_rows": 15955,
+          "n_churned": 4646,
+          "churn_rate": 0.291194,
+          "n_features": 29,
+          "n_nan": 0
+        },
+        {
+          "client_id": 5,
+          "n_rows": 531450,
+          "n_churned": 4646,
+          "churn_rate": 0.008742,
+          "n_features": 29,
+          "n_nan": 0
+        },
+        {
+          "client_id": 6,
+          "n_rows": 22293,
+          "n_churned": 10984,
+          "churn_rate": 0.492711,
+          "n_features": 29,
+          "n_nan": 0
+        },
+        {
+          "client_id": 7,
+          "n_rows": 93254,
+          "n_churned": 81945,
+          "churn_rate": 0.878729,
+          "n_features": 29,
+          "n_nan": 0
+        },
+        {
+          "client_id": 8,
+          "n_rows": 128994,
+          "n_churned": 117686,
+          "churn_rate": 0.912337,
+          "n_features": 29,
+          "n_nan": 0
+        },
+        {
+          "client_id": 9,
+          "n_rows": 26368,
+          "n_churned": 15060,
+          "churn_rate": 0.571147,
+          "n_features": 29,
+          "n_nan": 0
+        }
+      ],
+      "errors": [],
+      "passed": true
+    }
+  }
+}

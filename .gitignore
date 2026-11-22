@@ -28,8 +28,19 @@ data/synthetic/*
 !data/synthetic/.gitkeep
 
 # --- Experiment outputs ---
+# Large per-run dumps stay out of git; the small report-ready summaries
+# (E*.json, E*.csv, E*.md, *_metadata.json, *_verification.json) are tracked
+# because the report cites them directly.
 results/*
 !results/.gitkeep
+!results/E*.json
+!results/E*.csv
+!results/E*.md
+!results/*_metadata.json
+!results/*_verification.json
+!results/spark_benchmark.csv
+!results/eda_*.csv
+results/runs/
 mlruns/
 mlartifacts/
 mlflow.db

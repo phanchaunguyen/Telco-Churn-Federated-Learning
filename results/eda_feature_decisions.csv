@@ -1,0 +1,51 @@
+column,decision,group,reason
+Customer ID,id,—,identifier only; kept for silo disjointness checks
+Gender,FEATURE,Demographics,valid pre-outcome signal
+Age,FEATURE,Demographics,valid pre-outcome signal
+Under 30,drop,—,Loại 6 — derived from Age
+Senior Citizen,FEATURE,Demographics,valid pre-outcome signal
+Married,FEATURE,Demographics,valid pre-outcome signal
+Dependents,drop,—,Loại 6 — binary form of Number of Dependents
+Number of Dependents,FEATURE,Demographics,valid pre-outcome signal
+Country,drop,—,Loại 4 — constant (United States)
+State,drop,—,Loại 4 — constant (California)
+City,drop,—,Loại 5 — geo high-cardinality; EDA only
+Zip Code,drop,—,Loại 5 — geo high-cardinality; EDA only
+Latitude,drop,—,Loại 5 — geo high-cardinality; EDA only
+Longitude,drop,—,Loại 5 — geo high-cardinality; EDA only
+Population,drop,—,Loại 5 — geo high-cardinality; EDA only
+Quarter,drop,—,Loại 4 — constant (Q3)
+Referred a Friend,drop,—,Loại 6 — derived from Number of Referrals
+Number of Referrals,FEATURE,Account,valid pre-outcome signal
+Tenure in Months,FEATURE,Account,valid pre-outcome signal
+Offer,FEATURE,Account,valid pre-outcome signal
+Phone Service,FEATURE,Services,valid pre-outcome signal
+Avg Monthly Long Distance Charges,FEATURE,Usage & Billing,valid pre-outcome signal
+Multiple Lines,FEATURE,Services,valid pre-outcome signal
+Internet Service,FEATURE,Services,valid pre-outcome signal
+Internet Type,FEATURE,Services,valid pre-outcome signal
+Avg Monthly GB Download,FEATURE,Usage & Billing,valid pre-outcome signal
+Online Security,FEATURE,Services,valid pre-outcome signal
+Online Backup,FEATURE,Services,valid pre-outcome signal
+Device Protection Plan,FEATURE,Services,valid pre-outcome signal
+Premium Tech Support,FEATURE,Services,valid pre-outcome signal
+Streaming TV,FEATURE,Services,valid pre-outcome signal
+Streaming Movies,FEATURE,Services,valid pre-outcome signal
+Streaming Music,FEATURE,Services,valid pre-outcome signal
+Unlimited Data,FEATURE,Services,valid pre-outcome signal
+Contract,FEATURE,Account,valid pre-outcome signal
+Paperless Billing,FEATURE,Account,valid pre-outcome signal
+Payment Method,FEATURE,Account,valid pre-outcome signal
+Monthly Charge,FEATURE,Usage & Billing,valid pre-outcome signal
+Total Charges,FEATURE,Usage & Billing,valid pre-outcome signal
+Total Refunds,drop,—,"Loại 3 — result of complaints, precursor to churn"
+Total Extra Data Charges,FEATURE,Usage & Billing,valid pre-outcome signal
+Total Long Distance Charges,FEATURE,Usage & Billing,valid pre-outcome signal
+Total Revenue,drop,—,Loại 3 — includes refunds (downstream of complaints)
+Satisfaction Score,drop,—,"Loại 2 — collected at quarter end, post-decision"
+Customer Status,drop,—,Loại 1 — target leakage (3-class source)
+Churn Label,drop,—,Loại 1 — target leakage (label source)
+Churn Score,drop,—,Loại 2 — post-hoc; used as E0 external baseline only
+CLTV,drop,—,Loại 2 — post-hoc predicted lifetime value
+Churn Category,drop,—,Loại 3 — exit reason; EDA only (E5.2 strata)
+Churn Reason,drop,—,Loại 3 — exit reason text; EDA only
