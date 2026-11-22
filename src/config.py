@@ -109,7 +109,10 @@ class ModelCfg(BaseModel):
     name: str = "mlp"
     hidden_dims: list[int] = Field(default_factory=lambda: [128, 64, 32])
     dropout: float = 0.3
-    batch_norm: bool = True
+    # GroupNorm is the default because Opacus cannot wrap BatchNorm, and
+    # because BatchNorm buffers break under non-IID FedAvg averaging.
+    norm: Literal["groupnorm", "batchnorm", "layernorm", "none"] = "groupnorm"
+    num_groups: int = 8
 
 
 class FedProxCfg(BaseModel):

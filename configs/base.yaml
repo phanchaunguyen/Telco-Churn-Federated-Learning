@@ -81,7 +81,13 @@ model:
   name: mlp
   hidden_dims: [128, 64, 32]
   dropout: 0.3
-  batch_norm: true
+  # GroupNorm, not BatchNorm. Three reasons, any one sufficient:
+  #   1. Opacus cannot wrap BatchNorm (per-sample gradients undefined)
+  #   2. Fair comparison across E1-E7 (no architecture confound with E4)
+  #   3. BatchNorm buffers break under non-IID FedAvg averaging
+  # See docs/09_fl_architecture.md section 2.
+  norm: groupnorm
+  num_groups: 8
   # input_dim is RUNTIME-DETERMINED from X_train.shape[1] — never hardcode
 
 # -----------------------------------------------------------------------------
