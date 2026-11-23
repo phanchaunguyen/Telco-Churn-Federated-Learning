@@ -17,9 +17,9 @@
   "panels": [
     {
       "id": 1,
-      "type": "timeseries",
+      "type": "barchart",
       "title": "AUC per round \u2014 IID baseline",
-      "description": "AUC reported by the server each round for the IID partition. E1 records only final metrics per fold, so E2 is the run that carries a round-by-round curve.",
+      "description": "AUC reported by the server each round for the IID partition. E1 records only final metrics per fold, so E2 is the run that carries a round-by-round curve. Rendered as a bar chart over the round number: `round` is an integer, not a timestamp, so a time-series panel would place every point in 1970 and report \"Data outside time range\".",
       "gridPos": {
         "h": 9,
         "w": 12,
@@ -33,39 +33,33 @@
       "targets": [
         {
           "refId": "A",
-          "format": "time_series",
-          "rawSql": "SELECT round AS time, auc, run FROM e1_convergence WHERE run = 'iid' ORDER BY round",
+          "format": "table",
+          "rawSql": "SELECT round, auc, run FROM e1_convergence WHERE run = 'iid' ORDER BY round",
           "rawQuery": true
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 2,
-            "fillOpacity": 0
-          },
           "unit": "none",
-          "min": 0.7,
-          "max": 0.95
+          "min": 0.75,
+          "max": 0.85
         },
         "overrides": []
       },
       "options": {
+        "xField": "round",
+        "orientation": "vertical",
         "legend": {
           "displayMode": "list",
           "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
         }
       }
     },
     {
       "id": 2,
-      "type": "timeseries",
+      "type": "barchart",
       "title": "AUC per round \u2014 non-IID partitions",
-      "description": "Same metric across IID and the two Dirichlet skews, so the cost of non-IID is visible round by round.",
+      "description": "Same metric across IID and the two Dirichlet skews, so the cost of non-IID is visible round by round. Rendered as a bar chart over the round number: `round` is an integer, not a timestamp, so a time-series panel would place every point in 1970 and report \"Data outside time range\".",
       "gridPos": {
         "h": 9,
         "w": 12,
@@ -79,31 +73,25 @@
       "targets": [
         {
           "refId": "A",
-          "format": "time_series",
-          "rawSql": "SELECT round AS time, auc, run FROM e1_convergence WHERE run <> 'iid' ORDER BY round",
+          "format": "table",
+          "rawSql": "SELECT round, auc, run FROM e1_convergence WHERE run <> 'iid' ORDER BY round",
           "rawQuery": true
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 2,
-            "fillOpacity": 0
-          },
           "unit": "none",
-          "min": 0.7,
-          "max": 0.95
+          "min": 0.75,
+          "max": 0.85
         },
         "overrides": []
       },
       "options": {
+        "xField": "round",
+        "orientation": "vertical",
         "legend": {
           "displayMode": "list",
           "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
         }
       }
     },
