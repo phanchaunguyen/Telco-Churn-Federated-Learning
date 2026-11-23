@@ -183,3 +183,78 @@ def test_validate_partitions_rejects_wrong_length(frame: pd.DataFrame) -> None:
     assignment = assign_iid(frame, k=10, seed=42)[:-1]
     with pytest.raises(AssertionError, match="length mismatch"):
         validate_partitions(frame, assignment, 10, strategy="iid")
+
+
+# ---------------------------------------------------------------------------
+# build_partitions — directory naming (E6 K sweep)
+# ---------------------------------------------------------------------------
+_CATEGORICAL = (
+    "Gender", "Senior Citizen", "Married", "Offer", "Contract",
+    "Paperless Billing", "Payment Method", "Phone Service", "Multiple Lines",
+    "Internet Service", "Internet Type", "Online Security", "Online Backup",
+    "Device Protection Plan", "Premium Tech Support", "Streaming TV",
+    "Streaming Movies", "Streaming Music", "Unlimited Data",
+)
+
+
+def _write_synth_train(path, n: int = 600) -> None:
+    """Write a minimal synth_train parquet with columns in the expected order."""
+    rng = np.random.default_rng(0)
+    data = {}
+    for col in FEATURE_COLS:
+        if col in _CATEGORICAL:
+            data[col] = rng.choice(["A", "B"], size=n)
+        else:
+            data[col] = rng.normal(size=n)
+    data[TARGET_COL] = rng.integers(0, 2, size=n)
+    pd.DataFrame(data)[[*FEATURE_COLS, TARGET_COL]].to_parquet(path, index=False)
+
+
+def test_build_partitions_k_tag_appends_k(tmp_path) -> None:
+    """k_tag=True must write to ``partitions_iid_k{k}``, not ``partitions_iid``."""
+    from src.partitioning.s05_partition import build_partitions
+
+    src = tmp_path / "synth_train.parquet"
+    _write_synth_train(src)
+
+    build_partitions(
+        "iid", k=5, k_tag=True, synthetic_path=src, out_dir=tmp_path, write=True
+    )
+
+    assert (tmp_path / "partitions_iid_k5").is_dir()
+    assert not (tmp_path / "partitions_iid").exists()
+
+
+def test_build_partitions_without_k_tag_keeps_legacy_name(tmp_path) -> None:
+    """The default must stay ``partitions_iid`` so E1-E5 keep working."""
+    from src.partitioning.s05_partition import build_partitions
+
+    src = tmp_path / "synth_train.parquet"
+    _write_synth_train(src)
+
+    build_partitions("iid", k=10, synthetic_path=src, out_dir=tmp_path, write=True)
+
+    assert (tmp_path / "partitions_iid").is_dir()
+    assert not (tmp_path / "partitions_iid_k10").exists()
+
+
+def test_build_partitions_clears_stale_client_files(tmp_path) -> None:
+    """A leftover client_9.parquet from a larger K must not survive a K=5 build.
+
+    Without the cleanup, fit_vocabulary would pick up 10 files in a directory
+    that is supposed to hold 5, silently mixing two partitionings.
+    """
+    from src.partitioning.s05_partition import build_partitions
+
+    src = tmp_path / "synth_train.parquet"
+    _write_synth_train(src)
+
+    stale_dir = tmp_path / "partitions_iid"
+    stale_dir.mkdir()
+    for i in range(10):
+        (stale_dir / f"client_{i}.parquet").write_bytes(b"stale")
+
+    build_partitions("iid", k=5, synthetic_path=src, out_dir=tmp_path, write=True)
+
+    remaining = sorted(p.name for p in stale_dir.glob("client_*.parquet"))
+    assert remaining == [f"client_{i}.parquet" for i in range(5)]

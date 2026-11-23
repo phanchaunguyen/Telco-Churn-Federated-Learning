@@ -26,6 +26,7 @@
 | **13** | `13_layer1_plan.md` | A | W2–W3 | 🚧 | **Kế hoạch hoàn thành Layer 1: 9 phases, 12 artifacts, 8 commits** |
 | **14** | `14_naming_convention.md` | All | W1 | ✅ | **Quy ước đánh số file/thư mục theo thứ tự pipeline** |
 | **15** | `15_w6_results.md` | B | W6 | ✅ | **E2 partition impact (PASS) + E3 aggregation (FAIL), 2 lỗi metric, FedAvgM divergence** |
+| **16** | `16_w8_results.md` | C | W8 | ✅ | **E6 scalability (PASS, cost phẳng) + E7 communication (PASS, 0.18% AUC cho 5× băng thông)** |
 
 ---
 

@@ -246,6 +246,7 @@ def build_partitions(
     synthetic_path: str | Path | None = None,
     write: bool = True,
     out_dir: str | Path | None = None,
+    k_tag: bool = False,
 ) -> list[pd.DataFrame]:
     """Partition ``synth_train`` into ``k`` client frames.
 
@@ -265,6 +266,12 @@ def build_partitions(
         When ``True``, write one parquet per client plus metadata.
     out_dir:
         Override for the output directory.
+    k_tag:
+        Append ``_k{k}`` to the directory name. Required for K sweeps: without
+        it, building K=5 writes into ``partitions_iid`` and silently replaces
+        the K=10 files while leaving ``client_5..9`` behind, so the directory
+        ends up holding a mix of two different partitionings. The default is
+        ``False`` so the K=10 artifacts that E1-E5 depend on keep their names.
 
     Returns
     -------
@@ -315,8 +322,16 @@ def build_partitions(
     if write:
         target_dir = Path(out_dir) if out_dir is not None else cfg.paths.synthetic_dir
         tag = strategy if alpha is None else f"{strategy}_a{alpha}"
+        if k_tag:
+            tag = f"{tag}_k{n_clients}"
         part_dir = target_dir / f"partitions_{tag}"
         part_dir.mkdir(parents=True, exist_ok=True)
+
+        # A stale client_{i}.parquet from a previous run with a larger K would
+        # survive the overwrite and be picked up by fit_vocabulary, silently
+        # mixing two partitionings. Clear the directory first.
+        for stale in part_dir.glob("client_*.parquet"):
+            stale.unlink()
 
         for c, part in enumerate(partitions):
             path = part_dir / f"client_{c}.parquet"

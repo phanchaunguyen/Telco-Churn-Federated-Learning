@@ -24,6 +24,7 @@ Usage
 from __future__ import annotations
 
 import logging
+import time
 from pathlib import Path
 from typing import Any
 
@@ -292,9 +293,14 @@ def run_sequential(
 
     losses: list[tuple[int, float]] = []
     aucs: list[tuple[int, float]] = []
+    round_times: list[tuple[int, float]] = []
     momentum: list[np.ndarray] | None = None
     beta = cfg.fl.strategies.fedavgm.server_momentum
     lr = cfg.fl.strategies.fedavgm.server_learning_rate
+
+    # Wall-clock for the whole run, excluding client construction above. E6
+    # measures scaling, so the timer must cover only the federated loop.
+    run_start = time.perf_counter()
 
     logger.info(
         "Sequential simulation: strategy=%s partition=%s rounds=%s clients=%s "
@@ -307,6 +313,7 @@ def run_sequential(
     )
 
     for rnd in range(1, rounds + 1):
+        round_start = time.perf_counter()
         selected = rng.choice(k, size=n_selected, replace=False)
         selected = sorted(int(c) for c in selected)
 
@@ -354,6 +361,7 @@ def run_sequential(
         round_auc = float(np.nanmean([m["auc"] for _, _, m in results]))
         losses.append((rnd, round_loss))
         aucs.append((rnd, round_auc))
+        round_times.append((rnd, time.perf_counter() - round_start))
 
         logger.info(
             "Round %s/%s: clients=%s loss=%.4f auc=%.4f",
@@ -364,6 +372,8 @@ def run_sequential(
             round_auc,
         )
 
+    total_seconds = time.perf_counter() - run_start
+
     return {
         "strategy": strategy_name,
         "partition": partition,
@@ -372,6 +382,8 @@ def run_sequential(
         "n_selected_per_round": n_selected,
         "losses_distributed": losses,
         "metrics_distributed": {"auc": aucs},
+        "round_times": round_times,
+        "total_seconds": total_seconds,
         "epsilons": [c.epsilon for c in clients],
         "final_weights": global_weights,
         "input_dim": input_dim,
