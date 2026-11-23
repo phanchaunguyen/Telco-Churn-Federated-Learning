@@ -43,8 +43,22 @@ def test_load_strata_raises_on_missing_ids(monkeypatch) -> None:
     eda = pd.DataFrame({"Customer ID": ["a"], "Churn Category": ["Price"]})
 
     monkeypatch.setattr(pd, "read_parquet", lambda *a, **k: eda)
-    with pytest.raises(KeyError, match="no Churn Category"):
+    with pytest.raises(KeyError, match="no match for Customer ID"):
         load_strata(test_df)
+
+
+def test_load_strata_normalizes_na_category_to_none(monkeypatch) -> None:
+    """Non-churners have Category NA at source; they must become stratum 'None'."""
+    test_df = pd.DataFrame({"Customer ID": ["a", "b"]})
+    eda = pd.DataFrame({
+        "Customer ID": ["a", "b"],
+        "Churn Category": [np.nan, "Price"],
+    })
+
+    monkeypatch.setattr(pd, "read_parquet", lambda *a, **k: eda)
+    strata = load_strata(test_df)
+
+    assert list(strata) == ["None", "Price"]
 
 
 def test_load_strata_keeps_none_as_a_stratum(monkeypatch) -> None:
@@ -87,19 +101,23 @@ def _client_table():
     ])
 
 
-def _stratum_table():
+def _reason_table():
     return pd.DataFrame([
         {
             "strategy": "fedavg",
-            "stratum_auc_std": 0.0500,
-            "stratum_auc_min": 0.7000,
-            "stratum_auc_gap": 0.1500,
+            "reason_recall_mean": 0.3100,
+            "reason_recall_std": 0.0500,
+            "reason_recall_min": 0.2000,
+            "reason_recall_max": 0.4000,
+            "reason_recall_gap": 0.2000,
         },
         {
             "strategy": "fedprox",
-            "stratum_auc_std": 0.0400,
-            "stratum_auc_min": 0.7200,
-            "stratum_auc_gap": 0.1200,
+            "reason_recall_mean": 0.3200,
+            "reason_recall_std": 0.0400,
+            "reason_recall_min": 0.2400,
+            "reason_recall_max": 0.3900,
+            "reason_recall_gap": 0.1500,
         },
     ])
 
@@ -108,9 +126,9 @@ def _runs():
     return [
         {
             "strategy": "fedavg",
-            "per_stratum": [
-                {"stratum": "None", "n_rows": 944, "n_churned": 0, "auc": float("nan")},
-                {"stratum": "Competitor", "n_rows": 170, "n_churned": 170, "auc": 0.7100},
+            "per_reason": [
+                {"reason": "Competitor", "n_churned": 170, "n_flagged": 68, "recall": 0.4000},
+                {"reason": "Price", "n_churned": 50, "n_flagged": 10, "recall": 0.2000},
             ],
         }
     ]
@@ -119,8 +137,8 @@ def _runs():
 def test_render_e5_contains_both_sections() -> None:
     md = _render_e5(
         _client_table(),
-        _stratum_table(),
-        {"fedprox_client_std_gain_pct": 33.3, "fedprox_stratum_std_gain_pct": 20.0},
+        _reason_table(),
+        {"fedprox_client_std_gain_pct": 33.3, "fedprox_reason_std_gain_pct": 20.0},
         _runs(),
         "label_skew_a0.1",
     )
@@ -132,8 +150,8 @@ def test_render_e5_contains_both_sections() -> None:
 def test_render_e5_reports_pass_when_dispersion_drops() -> None:
     md = _render_e5(
         _client_table(),
-        _stratum_table(),
-        {"fedprox_client_std_gain_pct": 33.3, "fedprox_stratum_std_gain_pct": 20.0},
+        _reason_table(),
+        {"fedprox_client_std_gain_pct": 33.3, "fedprox_reason_std_gain_pct": 20.0},
         _runs(),
         "label_skew_a0.1",
     )
@@ -144,8 +162,8 @@ def test_render_e5_reports_pass_when_dispersion_drops() -> None:
 def test_render_e5_reports_fail_when_dispersion_grows() -> None:
     md = _render_e5(
         _client_table(),
-        _stratum_table(),
-        {"fedprox_client_std_gain_pct": -10.0, "fedprox_stratum_std_gain_pct": -5.0},
+        _reason_table(),
+        {"fedprox_client_std_gain_pct": -10.0, "fedprox_reason_std_gain_pct": -5.0},
         _runs(),
         "label_skew_a0.1",
     )
@@ -153,33 +171,48 @@ def test_render_e5_reports_fail_when_dispersion_grows() -> None:
 
 
 def test_render_e5_always_includes_the_caveat() -> None:
-    """The +/-0.10 CI caveat is mandatory; it must never be dropped."""
+    """The CI caveat is mandatory; it must never be dropped."""
     md = _render_e5(
         _client_table(),
-        _stratum_table(),
+        _reason_table(),
         {"fedprox_client_std_gain_pct": 1.0},
         _runs(),
         "label_skew_a0.1",
     )
-    assert "±0.10" in md
-    assert "75 churned rows" in md
+    assert "±0.13" in md
+    assert "40-170 positives" in md
 
 
-def test_render_e5_renders_nan_stratum_as_na() -> None:
+def test_render_e5_explains_why_auc_is_not_used() -> None:
+    """The report must state that per-reason AUC is undefined, not just omit it."""
     md = _render_e5(
         _client_table(),
-        _stratum_table(),
+        _reason_table(),
         {"fedprox_client_std_gain_pct": 1.0},
         _runs(),
         "label_skew_a0.1",
     )
-    assert "n/a" in md
+    assert "100% positive" in md
+    assert "AUC" in md
+
+
+def test_render_e5_shows_per_reason_detail() -> None:
+    md = _render_e5(
+        _client_table(),
+        _reason_table(),
+        {"fedprox_client_std_gain_pct": 1.0},
+        _runs(),
+        "label_skew_a0.1",
+    )
+    assert "Competitor" in md
+    assert "Price" in md
+    assert "0.4000" in md
 
 
 def test_render_e5_without_runs_does_not_crash() -> None:
     md = _render_e5(
         _client_table(),
-        _stratum_table(),
+        _reason_table(),
         {"fedprox_client_std_gain_pct": 1.0},
         [],
         "label_skew_a0.1",
@@ -188,5 +221,5 @@ def test_render_e5_without_runs_does_not_crash() -> None:
 
 
 def test_min_stratum_samples_is_sane() -> None:
-    """Below ~30 rows AUC is dominated by a handful of positives."""
+    """Below ~30 churners recall is dominated by a handful of rows."""
     assert MIN_STRATUM_SAMPLES >= 30

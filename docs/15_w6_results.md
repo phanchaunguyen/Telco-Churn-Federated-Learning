@@ -1,8 +1,8 @@
-# 15 — Kết quả W6: E2 partition impact + E3 aggregation robustness
+# 15 — Kết quả W6/W7: E2, E3, E4, E5
 
-> **Trạng thái:** E2 ✅ PASS · E3 ❌ FAIL (kết quả thật, không phải bug)
+> **Trạng thái:** E2 ✅ PASS · E3 ❌ FAIL · E4 ✅ PASS · E5 ✅ PASS
 > **Ngày chạy:** 2026-11-23
-> **Protocol:** `docs/10_experiment_protocol.md` §5 (E2), §6 (E3)
+> **Protocol:** `docs/10_experiment_protocol.md` §5 (E2), §6 (E3), §7 (E4), §8 (E5)
 
 ---
 
@@ -137,7 +137,102 @@ qua bước đó.
 
 ---
 
-## 6. Tái lập
+## 6. E4 — DP-SGD utility cost
+
+**Câu hỏi (RQ5):** DP-SGD mất bao nhiêu AUC để đổi lấy ε?
+
+**Thiết lập:** partition `iid`, FedAvg + Opacus, 50 rounds, δ=1e-5,
+`max_grad_norm=1.0`, sweep σ ∈ {0, 0.5, 1, 2}.
+
+| σ | ε (δ=1e-5) | AUC | 95% CI | PR-AUC | Recall@10% | Mất AUC |
+|---|---|---|---|---|---|---|
+| 0.0 (non-DP) | ∞ | 0.8949 | [0.8755, 0.9123] | 0.8121 | 0.3289 | +0.00% |
+| 0.5 | 12.37 | 0.8941 | [0.8749, 0.9108] | 0.7877 | 0.3262 | +0.09% |
+| 1.0 | 1.55 | 0.8894 | [0.8697, 0.9067] | 0.7500 | 0.3128 | +0.62% |
+| 2.0 | 0.57 | 0.8865 | [0.8663, 0.9047] | 0.7799 | 0.3128 | +0.94% |
+
+**Tiêu chí #5 (privacy mất utility, đơn điệu): PASS** — mất tối đa 0.94% AUC.
+
+### Nhận xét
+
+- **AUC gần như không đổi** (0.8949 → 0.8865, chỉ −0.94%) trong khi ε giảm từ ∞
+  xuống 0.57. Đây là kết quả đáng chú ý: DP-SGD gần như miễn phí về AUC ở mức
+  ε này.
+- **PR-AUC mới là chỉ số nhạy**: 0.8121 → 0.7500 (−7.6%) ở σ=1.0. Lớp thiểu số
+  bị ảnh hưởng rõ hơn AUC, đúng như lý thuyết (noise làm mờ ranh giới lớp hiếm).
+- **PR-AUC không đơn điệu** (0.7500 ở σ=1.0 rồi 0.7799 ở σ=2.0). Đây là nhiễu
+  ngẫu nhiên của DP, không phải xu hướng — với 374 positives, PR-AUC có CI rộng.
+  Tiêu chí #5 chỉ yêu cầu AUC đơn điệu, và AUC thì đơn điệu thật.
+- **ε ở σ=0.5 cao bất thường (12.37)** vì 50 rounds × 5 client × 352 batch =
+  17,600 bước, sampling rate 0.28%. Privacy budget tích luỹ theo số bước, nên
+  muốn ε thấp phải tăng σ hoặc giảm rounds.
+
+---
+
+## 7. E5 — Fairness
+
+**Câu hỏi (RQ4):** FL có gây unfairness giữa các client / giữa các lý do churn?
+
+**Thiết lập:** partition `label_skew_a0.1`, 50 rounds, FedAvg vs FedProx.
+
+### E5.1 — Per-client
+
+| Strategy | Overall AUC | Client AUC mean | Client AUC std | Worst client | Spread |
+|---|---|---|---|---|---|
+| `fedavg` | 0.8889 | 0.7950 | 0.0045 | 0.7883 | 0.0166 |
+| `fedprox` | 0.8835 | 0.7914 | 0.0040 | 0.7837 | 0.0117 |
+
+### E5.2 — Recall theo lý do churn
+
+| Strategy | Recall mean | Recall std | Worst reason | Spread |
+|---|---|---|---|---|
+| `fedavg` | 0.2940 | 0.0648 | 0.2000 | 0.1647 |
+| `fedprox` | 0.3088 | 0.0570 | 0.2200 | 0.1550 |
+
+Chi tiết FedAvg: Competitor 0.3647 (62/170), Dissatisfaction 0.3214 (18/56),
+Other 0.3250 (13/40), Attitude 0.2586 (15/58), **Price 0.2000 (10/50)**.
+
+**Tiêu chí #6 (FedProx giảm unfairness): PASS** — client std +10.34%,
+reason recall std +12.04% (dương = ít phân tán hơn = công bằng hơn).
+
+### Nhận xét
+
+- **FedProx công bằng hơn nhưng kém chính xác hơn**: AUC 0.8889 → 0.8835
+  (−0.60%), đổi lại client std giảm 10.3% và worst-client spread giảm 30%
+  (0.0166 → 0.0117). Nhất quán với E3.
+- **Lý do `Price` khó nhất** (recall 0.20 so với 0.36 ở `Competitor`). Khách rời
+  vì giá có hành vi giống khách ở lại hơn — họ không bất mãn về dịch vụ, chỉ
+  thấy giá cao, nên feature hiện tại khó phân biệt.
+- **Caveat quan trọng:** với 40–170 positives mỗi lý do, CI của recall là ±0.13.
+  Chênh lệch 0.20 vs 0.36 nằm ngoài CI nên đáng tin; nhưng chênh lệch FedAvg vs
+  FedProx (0.2940 vs 0.3088) **nằm trong** nhiễu. Kết luận trung thực là
+  *không phát hiện khác biệt có ý nghĩa*, không phải "FedProx công bằng hơn".
+
+### ⚠️ Lỗi thiết kế đã sửa: E5.2 không thể dùng AUC
+
+Protocol ban đầu ghi "tính AUC riêng từng stratum". Điều này **sai về mặt toán
+học**: `Churn Category` chỉ được điền cho khách đã churn, nên mỗi stratum là
+100% positive — không có lớp âm để xếp hạng. Lần chạy đầu trả về
+`stratum AUC std = nan` đúng như dự đoán.
+
+Phân bố thực tế trên `test_real`:
+
+| Stratum | Số dòng | Churned |
+|---|---|---|
+| `None` (không churn) | 944 | 0 |
+| `Competitor` | 170 | 170 |
+| `Attitude` | 58 | 58 |
+| `Dissatisfaction` | 56 | 56 |
+| `Price` | 50 | 50 |
+| `Other` | 40 | 40 |
+
+**Sửa:** dùng recall@top-10% theo từng lý do. Ngưỡng tính **một lần trên toàn
+test set**, không per-stratum — nếu tính riêng, mỗi stratum luôn bị gắn cờ đúng
+10% và che mất chính sự chênh lệch cần đo.
+
+---
+
+## 8. Tái lập
 
 ```bash
 # E2 (~18 phút)
@@ -145,7 +240,14 @@ python -m src.experiments.s16_e2_e3 --which e2 --rounds 50
 
 # E3 (~18 phút)
 python -m src.experiments.s16_e2_e3 --which e3 --rounds 50
+
+# E4 (~2 giờ, DP chậm 5.6x)
+python -m src.experiments.s17_e4_dp --rounds 50
+
+# E5 (~15 phút)
+python -m src.experiments.s18_e5_fairness --rounds 50 \
+  --partition label_skew_a0.1 --strategies fedavg fedprox
 ```
 
-Seed cố định 42 nên kết quả tái lập byte-for-byte: E3 `fedavg` cho đúng
-0.8889, trùng khớp E2 `label_skew_a0.1`.
+Seed cố định 42 nên kết quả tái lập byte-for-byte: E3 `fedavg`, E4 `σ=0`, và
+E5 `fedavg` đều cho đúng 0.8889/0.8949, trùng khớp E2.

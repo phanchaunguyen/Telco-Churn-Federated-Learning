@@ -17,6 +17,7 @@ from src.evaluation.s12_eval import (
     build_comparison_table,
     evaluate_model,
     evaluate_per_stratum,
+    evaluate_recall_by_reason,
     evaluate_with_ci,
     predict_proba,
     recall_at_top_fraction,
@@ -271,6 +272,91 @@ def test_evaluate_per_stratum_single_class_gets_nan() -> None:
     df = evaluate_per_stratum(_FixedModel(scores), np.zeros((100, 1)), y, strata)
     all_neg = df.loc[df["stratum"] == "all_neg", "auc"].iloc[0]
     assert np.isnan(all_neg)
+
+
+# ---------------------------------------------------------------------------
+# Recall by churn reason (E5.2)
+# ---------------------------------------------------------------------------
+def test_recall_by_reason_uses_one_global_threshold() -> None:
+    """The cut-off must come from the whole test set, not from each reason.
+
+    A per-reason cut-off would flag the same share of every reason by
+    construction and hide the disparity this metric exists to measure.
+    """
+    # 200 rows: 100 churners split across two reasons, 100 non-churners.
+    # Scores are set so the global top-10% (20 rows) are all reason "easy".
+    y = np.array([1] * 100 + [0] * 100)
+    scores = np.concatenate([
+        np.linspace(0.90, 0.99, 50),   # reason "easy"  -> highest scores
+        np.linspace(0.10, 0.20, 50),   # reason "hard"  -> lowest scores
+        np.linspace(0.00, 0.05, 100),  # non-churners
+    ])
+    reasons = np.array(["easy"] * 50 + ["hard"] * 50 + ["None"] * 100)
+
+    df = evaluate_recall_by_reason(
+        _FixedModel(scores), np.zeros((200, 1)), y, reasons, fraction=0.10
+    )
+
+    easy = df.loc[df["reason"] == "easy", "recall"].iloc[0]
+    hard = df.loc[df["reason"] == "hard", "recall"].iloc[0]
+
+    # Top 20 of 200 rows are all "easy" -> recall 20/50, "hard" gets nothing
+    assert easy == pytest.approx(20 / 50)
+    assert hard == pytest.approx(0.0)
+
+
+def test_recall_by_reason_excludes_none_stratum() -> None:
+    """Non-churners are not a churn reason and must not appear in the table."""
+    y = np.array([1] * 40 + [0] * 60)
+    scores = np.linspace(0, 1, 100)
+    reasons = np.array(["Price"] * 40 + ["None"] * 60)
+
+    df = evaluate_recall_by_reason(_FixedModel(scores), np.zeros((100, 1)), y, reasons)
+
+    assert "None" not in set(df["reason"])
+    assert set(df["reason"]) == {"Price"}
+
+
+def test_recall_by_reason_drops_small_reasons() -> None:
+    """A reason with fewer than min_samples churners is dropped, not reported."""
+    y = np.array([1] * 50 + [0] * 50)
+    scores = np.linspace(0, 1, 100)
+    reasons = np.array(["big"] * 45 + ["tiny"] * 5 + ["None"] * 50)
+
+    df = evaluate_recall_by_reason(
+        _FixedModel(scores), np.zeros((100, 1)), y, reasons, min_samples=30
+    )
+
+    assert set(df["reason"]) == {"big"}
+
+
+def test_recall_by_reason_counts_flagged_rows() -> None:
+    """n_flagged must equal the number of rows at or above the global cut-off."""
+    # Price rows carry the highest scores, so the global top-10% is all Price
+    y = np.array([1] * 50 + [0] * 50)
+    scores = np.concatenate([np.linspace(0.90, 1.00, 50), np.linspace(0.0, 0.5, 50)])
+    reasons = np.array(["Price"] * 50 + ["None"] * 50)
+
+    df = evaluate_recall_by_reason(
+        _FixedModel(scores), np.zeros((100, 1)), y, reasons, fraction=0.10
+    )
+
+    row = df.iloc[0]
+    assert row["n_churned"] == 50
+    assert row["n_flagged"] == 10
+    assert row["recall"] == pytest.approx(0.2)
+
+
+def test_recall_by_reason_empty_when_all_none() -> None:
+    """With no churn reasons at all the table is empty, not an error."""
+    y = np.zeros(100, dtype=int)
+    scores = np.linspace(0, 1, 100)
+    reasons = np.array(["None"] * 100)
+
+    df = evaluate_recall_by_reason(_FixedModel(scores), np.zeros((100, 1)), y, reasons)
+
+    assert df.empty
+    assert list(df.columns) == ["reason", "n_churned", "n_flagged", "recall"]
 
 
 # ---------------------------------------------------------------------------

@@ -336,6 +336,79 @@ def evaluate_per_stratum(
 
 
 # =============================================================================
+# Per-reason recall (E5.2, correct formulation)
+# =============================================================================
+def evaluate_recall_by_reason(
+    model: torch.nn.Module,
+    X: np.ndarray,
+    y: np.ndarray,
+    reasons: np.ndarray,
+    *,
+    fraction: float = RECALL_TOP_FRACTION,
+    min_samples: int = 30,
+) -> pd.DataFrame:
+    """Recall within each churn reason, using one global threshold.
+
+    ``Churn Category`` is only populated for customers who actually churned, so
+    every reason stratum is 100% positive. AUC is undefined there — there is no
+    negative class to rank against. The meaningful question is instead: *of the
+    customers who left for reason R, what share did the model flag?*
+
+    The top-``fraction`` cut-off is computed **once over the whole test set**,
+    not per stratum. A per-stratum cut-off would flag the same share of every
+    reason by construction and hide exactly the disparity this measures.
+
+    Parameters
+    ----------
+    reasons:
+        Churn reason per row. Non-churners carry ``"None"`` and are excluded,
+        because recall is only defined for actual churners.
+    fraction:
+        Share of the full test set flagged as high risk.
+
+    Returns
+    -------
+    pandas.DataFrame
+        One row per reason with ``reason, n_churned, n_flagged, recall``.
+    """
+    y_score = predict_proba(model, X)
+    y_true = np.asarray(y)
+    reasons_arr = np.asarray(reasons)
+
+    # One global cut-off: the top `fraction` of the whole test set by score
+    n_top = max(1, int(round(len(y_true) * fraction)))
+    threshold = float(np.sort(y_score)[-n_top])
+
+    rows: list[dict[str, Any]] = []
+    for value in pd.unique(reasons_arr):
+        if value == "None":
+            continue
+        mask = reasons_arr == value
+        n = int(mask.sum())
+        if n < min_samples:
+            continue
+        flagged = int((y_score[mask] >= threshold).sum())
+        rows.append({
+            "reason": value,
+            "n_churned": n,
+            "n_flagged": flagged,
+            "recall": flagged / n,
+        })
+
+    df = pd.DataFrame(rows, columns=["reason", "n_churned", "n_flagged", "recall"])
+    if not df.empty:
+        df = df.sort_values("n_churned", ascending=False).reset_index(drop=True)
+        logger.info(
+            "Recall by reason: mean=%.4f std=%.4f min=%.4f max=%.4f",
+            df["recall"].mean(),
+            df["recall"].std(),
+            df["recall"].min(),
+            df["recall"].max(),
+        )
+    return df
+
+
+# =============================================================================
 # Comparison table
 # =============================================================================
 def build_comparison_table(results: dict[str, dict[str, Any]]) -> pd.DataFrame:

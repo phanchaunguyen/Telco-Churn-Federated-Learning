@@ -233,18 +233,47 @@ Fold 0, partition α=0.1 (severe skew), 50 rounds, mỗi strategy một lần.
 
 **So sánh:** FedAvg vs FedProx.
 
-### 8.2 E5.2 — Stratified by Churn Category
+### 8.2 E5.2 — Recall theo lý do churn
 
 **Câu hỏi:** FedProx có giảm unfairness **giữa các lý do churn** tốt hơn FedAvg?
 
 **Cách làm:**
 1. Join `test_real` với `eda_7043.parquet` trên `Customer ID`
-2. Lấy `Churn Category` (5 strata: Price / Competitor / Dissatisfaction / Attitude / Other)
-3. Tính AUC riêng từng stratum
-4. Grouped boxplot
+2. Lấy `Churn Category` (5 lý do: Price / Competitor / Dissatisfaction / Attitude / Other)
+3. Tính **recall@top-10%** riêng từng lý do
+4. Grouped bar chart
+
+**⚠️ Vì sao KHÔNG dùng AUC (sửa so với bản protocol cũ):**
+
+`Churn Category` chỉ được điền cho khách **đã churn**. Vì vậy mỗi stratum lý do là
+**100% positive** — không có lớp âm để xếp hạng, AUC không xác định được. Bản
+protocol đầu tiên ghi "tính AUC riêng từng stratum" là **sai về mặt toán học**;
+lần chạy đầu tiên trả về `stratum AUC std = nan` đúng như dự đoán.
+
+Số liệu thực tế trên `test_real` (1,318 dòng):
+
+| Stratum | Số dòng | Churned |
+|---|---|---|
+| `None` (không churn) | 944 | 0 |
+| `Competitor` | 170 | 170 |
+| `Attitude` | 58 | 58 |
+| `Dissatisfaction` | 56 | 56 |
+| `Price` | 50 | 50 |
+| `Other` | 40 | 40 |
+
+**Metric thay thế:** recall@top-10% — *"trong số khách rời đi vì lý do R, bao
+nhiêu % được model gắn cờ?"*
+
+**Điểm kỹ thuật quan trọng:** ngưỡng top-10% tính **một lần trên toàn bộ test
+set**, KHÔNG tính riêng từng stratum. Nếu tính riêng, mỗi stratum luôn bị gắn cờ
+đúng 10% theo thiết kế → che mất chính sự chênh lệch cần đo.
 
 **Caveat bắt buộc:**
-> "With 374 churned customers spread across 5 categories, each stratum contains roughly 75 churned rows. AUC on 75 positives has a 95% CI of roughly ±0.10, so differences smaller than that between strategies should not be interpreted as meaningful."
+> "With 374 churned customers spread across 5 reasons, each reason holds 40-170
+> positives. Recall on 50 positives has a 95% CI of roughly ±0.13, so differences
+> smaller than that between strategies should not be interpreted as meaningful.
+> A PASS on this criterion means the alternative strategy reduced dispersion on
+> at least one fairness view; it does not mean the model is fair."
 
 ---
 

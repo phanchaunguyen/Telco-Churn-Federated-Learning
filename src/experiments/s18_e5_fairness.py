@@ -7,19 +7,29 @@ Two complementary views of fairness:
 * **E5.1 — per-client.** Score the global model on each silo separately. A
   model that is accurate on average but useless on the smallest silo is not
   deployable, so the *worst* client matters more than the mean.
-* **E5.2 — per-stratum.** Score the global model within each ``Churn Category``
-  (Price / Competitor / Dissatisfaction / Attitude / Other). This asks whether
-  the model is equally good at catching customers who leave for different
-  reasons.
+* **E5.2 — per-reason recall.** Ask whether the model is equally good at
+  catching customers who leave for different reasons (Price / Competitor /
+  Dissatisfaction / Attitude / Other).
 
 The two views answer different questions and can disagree: a model can be fair
 across silos while being systematically worse at detecting price-driven churn.
 
+Why E5.2 uses recall and not AUC
+--------------------------------
+``Churn Category`` is only populated for customers who actually churned, so
+every reason stratum is 100% positive. AUC needs both classes to rank against
+and is therefore undefined there — an earlier version of this module reported
+``stratum AUC std = nan`` for exactly that reason. The meaningful question is
+instead: *of the customers who left for reason R, what share did the model
+flag?* The top-10% cut-off is computed once over the whole test set, not per
+stratum, because a per-stratum cut-off would flag the same share of every
+reason by construction and hide the disparity being measured.
+
 Caveat that must travel with E5.2
 ---------------------------------
-``test_real`` has 374 churned rows spread over 5 categories, so each stratum
-holds roughly 75 positives. AUC on 75 positives has a 95% CI of about ±0.10.
-Differences smaller than that between strategies are noise, not signal.
+``test_real`` has 374 churned rows spread over 5 reasons, so each stratum holds
+40-170 positives. Recall on 50 positives has a 95% CI of roughly ±0.13, so
+differences smaller than that between strategies are noise, not signal.
 
 Usage
 -----
@@ -41,7 +51,7 @@ import pandas as pd
 from src.config import get_config
 from src.evaluation.s12_eval import (
     evaluate_per_client,
-    evaluate_per_stratum,
+    evaluate_recall_by_reason,
     evaluate_with_ci,
 )
 from src.features.s07_preprocess import encode, fit_local_scaler, fit_vocabulary
@@ -54,7 +64,8 @@ TARGET_COL = "churn"
 ID_COL = "Customer ID"
 STRATUM_COL = "Churn Category"
 
-# Strata smaller than this get AUC = nan; AUC on a handful of rows is noise
+# Reasons with fewer churners than this are dropped; recall on a handful of
+# rows is noise
 MIN_STRATUM_SAMPLES: int = 30
 
 
@@ -100,13 +111,19 @@ def load_strata(test_df: pd.DataFrame) -> np.ndarray:
     eda = pd.read_parquet(cfg.paths.eda_parquet, columns=[ID_COL, STRATUM_COL])
 
     merged = test_df[[ID_COL]].merge(eda, on=ID_COL, how="left")
-    if merged[STRATUM_COL].isna().any():
-        missing = int(merged[STRATUM_COL].isna().sum())
+
+    # A missing category is legitimate for non-churners (pandas reads the
+    # source "None" as NA). Only a missing Customer ID is a join failure.
+    missing_join = ~test_df[ID_COL].isin(set(eda[ID_COL]))
+    if missing_join.any():
+        missing = int(missing_join.sum())
         raise KeyError(
-            f"{missing} test rows have no {STRATUM_COL} in the EDA frame; "
+            f"{missing} test rows have no match for {ID_COL} in the EDA frame; "
             "the join would misalign strata"
         )
-    return merged[STRATUM_COL].astype(str).to_numpy()
+
+    categories = merged[STRATUM_COL].fillna("None")
+    return categories.astype(str).to_numpy()
 
 
 def _run_one(
@@ -140,7 +157,7 @@ def _run_one(
 
     overall = evaluate_with_ci(model, X_test, y_test, seed=seed)
     per_client = evaluate_per_client(model, part_dir, vocab, cfg.partitioning.n_clients)
-    per_stratum = evaluate_per_stratum(
+    per_reason = evaluate_recall_by_reason(
         model, X_test, y_test, strata, min_samples=MIN_STRATUM_SAMPLES
     )
 
@@ -152,28 +169,33 @@ def _run_one(
         "duration_sec": round(duration, 1),
         **overall,
         "per_client": per_client.to_dict(orient="records"),
-        "per_stratum": per_stratum.to_dict(orient="records"),
+        "per_reason": per_reason.to_dict(orient="records"),
         "client_auc_mean": float(per_client["auc"].mean()),
         "client_auc_std": float(per_client["auc"].std()),
         "client_auc_min": float(per_client["auc"].min()),
         "client_auc_max": float(per_client["auc"].max()),
         "client_auc_gap": float(per_client["auc"].max() - per_client["auc"].min()),
-        "stratum_auc_std": float(per_stratum["auc"].std()),
-        "stratum_auc_min": float(per_stratum["auc"].min()),
-        "stratum_auc_gap": float(per_stratum["auc"].max() - per_stratum["auc"].min()),
+        "reason_recall_mean": float(per_reason["recall"].mean()),
+        "reason_recall_std": float(per_reason["recall"].std()),
+        "reason_recall_min": float(per_reason["recall"].min()),
+        "reason_recall_max": float(per_reason["recall"].max()),
+        "reason_recall_gap": float(
+            per_reason["recall"].max() - per_reason["recall"].min()
+        ),
     }
 
     logger.info(
         "%s / %s: AUC %.4f | client AUC %.4f±%.4f (min %.4f) | "
-        "stratum AUC std %.4f (min %.4f), %.0fs",
+        "reason recall %.4f±%.4f (min %.4f), %.0fs",
         partition,
         strategy,
         overall["auc"],
         result["client_auc_mean"],
         result["client_auc_std"],
         result["client_auc_min"],
-        result["stratum_auc_std"],
-        result["stratum_auc_min"],
+        result["reason_recall_mean"],
+        result["reason_recall_std"],
+        result["reason_recall_min"],
         duration,
     )
     return result
@@ -205,8 +227,8 @@ def run_e5(
     Returns
     -------
     dict
-        ``{runs, client_table, stratum_table, fedprox_client_std_gain_pct,
-        fedprox_stratum_std_gain_pct}``
+        ``{runs, client_table, reason_table, fedprox_client_std_gain_pct,
+        fedprox_reason_std_gain_pct}``
     """
     cfg = get_config()
     rounds = n_rounds if n_rounds is not None else cfg.fl.n_rounds
@@ -248,12 +270,14 @@ def run_e5(
         for r in runs
     ])
 
-    stratum_table = pd.DataFrame([
+    reason_table = pd.DataFrame([
         {
             "strategy": r["strategy"],
-            "stratum_auc_std": r["stratum_auc_std"],
-            "stratum_auc_min": r["stratum_auc_min"],
-            "stratum_auc_gap": r["stratum_auc_gap"],
+            "reason_recall_mean": r["reason_recall_mean"],
+            "reason_recall_std": r["reason_recall_std"],
+            "reason_recall_min": r["reason_recall_min"],
+            "reason_recall_max": r["reason_recall_max"],
+            "reason_recall_gap": r["reason_recall_gap"],
         }
         for r in runs
     ])
@@ -272,23 +296,23 @@ def run_e5(
             else 0.0
         )
 
-    base_s = stratum_table.iloc[0]
-    for _, row in stratum_table.iterrows():
+    base_s = reason_table.iloc[0]
+    for _, row in reason_table.iterrows():
         if row["strategy"] == base_s["strategy"]:
-            gains[f"{row['strategy']}_stratum_std_gain_pct"] = 0.0
+            gains[f"{row['strategy']}_reason_std_gain_pct"] = 0.0
             continue
-        gains[f"{row['strategy']}_stratum_std_gain_pct"] = (
-            (base_s["stratum_auc_std"] - row["stratum_auc_std"])
-            / base_s["stratum_auc_std"]
+        gains[f"{row['strategy']}_reason_std_gain_pct"] = (
+            (base_s["reason_recall_std"] - row["reason_recall_std"])
+            / base_s["reason_recall_std"]
             * 100
-            if base_s["stratum_auc_std"] > 0
+            if base_s["reason_recall_std"] > 0
             else 0.0
         )
 
     result = {
         "runs": runs,
         "client_table": client_table.to_dict(orient="records"),
-        "stratum_table": stratum_table.to_dict(orient="records"),
+        "reason_table": reason_table.to_dict(orient="records"),
         **gains,
     }
 
@@ -300,7 +324,7 @@ def run_e5(
 
         md = cfg.paths.results_dir / "E5_fairness.md"
         md.write_text(
-            _render_e5(client_table, stratum_table, gains, runs, partition),
+            _render_e5(client_table, reason_table, gains, runs, partition),
             encoding="utf-8",
         )
         logger.info("Wrote %s", md)
@@ -310,7 +334,7 @@ def run_e5(
 
 def _render_e5(
     client_table: pd.DataFrame,
-    stratum_table: pd.DataFrame,
+    reason_table: pd.DataFrame,
     gains: dict[str, float],
     runs: list[dict[str, Any]],
     partition: str,
@@ -334,52 +358,66 @@ def _render_e5(
 
     lines += [
         "",
-        "## E5.2 — Per-stratum fairness (Churn Category)",
+        "## E5.2 — Recall by churn reason",
         "",
-        "| Strategy | Stratum AUC std | Worst stratum | Spread |",
-        "|---|---|---|---|",
+        "Share of churners flagged by the global top-10% cut-off, per reason.",
+        "",
+        "| Strategy | Recall mean | Recall std | Worst reason | Best reason | Spread |",
+        "|---|---|---|---|---|---|",
     ]
-    for _, r in stratum_table.iterrows():
+    for _, r in reason_table.iterrows():
         lines.append(
-            f"| {r['strategy']} | {r['stratum_auc_std']:.4f} | "
-            f"{r['stratum_auc_min']:.4f} | {r['stratum_auc_gap']:.4f} |"
+            f"| {r['strategy']} | {r['reason_recall_mean']:.4f} | "
+            f"{r['reason_recall_std']:.4f} | {r['reason_recall_min']:.4f} | "
+            f"{r['reason_recall_max']:.4f} | {r['reason_recall_gap']:.4f} |"
         )
 
-    # Per-stratum detail for the first run, so the report shows which category
-    # is hardest rather than only the aggregate spread.
+    # Per-reason detail for the first run, so the report shows which reason is
+    # hardest rather than only the aggregate spread.
     if runs:
         lines += [
             "",
-            f"### Per-stratum detail — {runs[0]['strategy']}",
+            f"### Per-reason detail — {runs[0]['strategy']}",
             "",
-            "| Stratum | Rows | Churned | AUC |",
+            "| Reason | Churned | Flagged | Recall |",
             "|---|---|---|---|",
         ]
-        for row in runs[0]["per_stratum"]:
-            auc = "n/a" if not np.isfinite(row["auc"]) else f"{row['auc']:.4f}"
+        for row in runs[0]["per_reason"]:
             lines.append(
-                f"| {row['stratum']} | {row['n_rows']:,} | {row['n_churned']:,} | {auc} |"
+                f"| {row['reason']} | {row['n_churned']:,} | "
+                f"{row['n_flagged']:,} | {row['recall']:.4f} |"
             )
 
     alt = next((k for k in gains if k.endswith("_client_std_gain_pct") and not k.startswith("fedavg")), None)
     if alt:
         name = alt.replace("_client_std_gain_pct", "")
         c_gain = gains[alt]
-        s_gain = gains.get(f"{name}_stratum_std_gain_pct", 0.0)
-        verdict = "PASS" if c_gain > 0 or s_gain > 0 else "FAIL"
+        r_gain = gains.get(f"{name}_reason_std_gain_pct", 0.0)
+        verdict = "PASS" if c_gain > 0 or r_gain > 0 else "FAIL"
         lines += [
             "",
             f"**Success criterion #6 ({name} reduces unfairness): {verdict}** — "
-            f"client AUC std {c_gain:+.2f}%, stratum AUC std {s_gain:+.2f}% "
+            f"client AUC std {c_gain:+.2f}%, reason recall std {r_gain:+.2f}% "
             f"(positive = less dispersion = fairer)",
         ]
 
     lines += [
         "",
-        "> **Caveat (E5.2).** With 374 churned customers spread across 5 categories, "
-        "each stratum contains roughly 75 churned rows. AUC on 75 positives has a "
-        "95% CI of roughly ±0.10, so differences smaller than that between "
-        "strategies should not be interpreted as meaningful.",
+        "> **Caveat (E5.2).** With 374 churned customers spread across 5 reasons, "
+        "each reason holds 40-170 positives. Recall on 50 positives has a 95% CI "
+        "of roughly ±0.13, so differences smaller than that between strategies "
+        "should not be interpreted as meaningful.",
+        "",
+        "> **Why recall and not AUC.** `Churn Category` is only populated for "
+        "customers who churned, so every reason stratum is 100% positive. AUC "
+        "needs both classes and is undefined there.",
+        "",
+        "> **How to read the verdict.** The two fairness views can disagree, and "
+        "neither is decisive on its own. A PASS here means the alternative "
+        "strategy reduced dispersion on at least one view; it does **not** mean "
+        "the model is fair. With 40-170 positives per reason, a difference of a "
+        "few percentage points is inside the noise band, so the honest reading "
+        "is *no detectable difference* rather than *FedProx is fairer*.",
     ]
     return "\n".join(lines) + "\n"
 
@@ -421,6 +459,13 @@ def main() -> None:
             f"  {row['strategy']:<8} AUC={row['auc']:.4f}  "
             f"client std={row['client_auc_std']:.4f}  "
             f"worst={row['client_auc_min']:.4f}"
+        )
+    print("-" * 70)
+    for row in result["reason_table"]:
+        print(
+            f"  {row['strategy']:<8} recall mean={row['reason_recall_mean']:.4f}  "
+            f"std={row['reason_recall_std']:.4f}  "
+            f"worst={row['reason_recall_min']:.4f}"
         )
 
 
