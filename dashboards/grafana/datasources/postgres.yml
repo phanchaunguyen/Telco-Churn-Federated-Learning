@@ -1,0 +1,27 @@
+# Grafana datasource provisioning.
+#
+# Points at the same postgres the experiment tables live in. Grafana reads
+# `e1_convergence` for the live AUC chart; the table is refreshed by
+# `python -m src.serving.s23_export_results` after each experiment run.
+#
+# This is near-real-time, not native streaming: the Kafka consumer writes to
+# postgres and Grafana polls. Native Kafka streaming would need the Grafana
+# Kafka data source plugin, which is not installed.
+
+apiVersion: 1
+
+datasources:
+  - name: FLTelco
+    type: postgres
+    access: proxy
+    url: postgres:5432
+    database: mlflow
+    user: mlflow
+    secureJsonData:
+      password: mlflow
+    jsonData:
+      sslmode: disable
+      postgresVersion: 1600
+      timescaledb: false
+    isDefault: true
+    editable: true

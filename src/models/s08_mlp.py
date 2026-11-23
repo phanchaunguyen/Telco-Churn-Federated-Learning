@@ -38,6 +38,7 @@ torch.Size([8, 1])
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import Any
 
 import torch
@@ -109,6 +110,8 @@ class ChurnMLP(nn.Module):
         self.input_dim = input_dim
         self.hidden_dims = list(dims)
         self.norm_kind = norm
+        self.dropout = dropout
+        self.num_groups = num_groups
 
         layers: list[nn.Module] = []
         prev = input_dim
@@ -196,6 +199,63 @@ def set_weights(model: nn.Module, weights: list[np.ndarray]) -> None:  # noqa: F
 def count_parameters(model: nn.Module) -> int:
     """Total trainable parameter count."""
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+
+# =============================================================================
+# Persistence (serving)
+# =============================================================================
+def save_model(model: nn.Module, path: str | Path) -> Path:  # noqa: F821
+    """Save a model's state dict plus the metadata needed to rebuild it.
+
+    ``state_dict`` alone is not enough to reload: the architecture depends on
+    ``input_dim``, ``hidden_dims``, ``dropout``, ``norm`` and ``num_groups``.
+    Those are stored alongside the weights so ``load_model`` can reconstruct
+    the exact same module without the caller having to remember the config.
+
+    Returns
+    -------
+    pathlib.Path
+        The path written, for logging.
+    """
+    out = Path(path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+
+    payload = {
+        "state_dict": model.state_dict(),
+        "input_dim": model.input_dim,
+        "hidden_dims": list(model.hidden_dims),
+        "dropout": model.dropout,
+        "norm": model.norm_kind,
+        "num_groups": model.num_groups,
+    }
+    torch.save(payload, out)
+    logger.info("Saved model to %s (%s params)", out, count_parameters(model))
+    return out
+
+
+def load_model(path: str | Path) -> ChurnMLP:
+    """Rebuild a model from a file written by :func:`save_model`.
+
+    The architecture is read from the file, so the caller does not need to
+    know ``input_dim`` or the hidden sizes. The returned model is in eval mode
+    because every serving path wants inference, not training.
+    """
+    src = Path(path)
+    if not src.exists():
+        raise FileNotFoundError(f"Model file not found: {src}")
+
+    payload = torch.load(src, map_location="cpu", weights_only=False)
+    model = ChurnMLP(
+        input_dim=payload["input_dim"],
+        hidden_dims=payload["hidden_dims"],
+        dropout=payload["dropout"],
+        norm=payload["norm"],
+        num_groups=payload["num_groups"],
+    )
+    model.load_state_dict(payload["state_dict"])
+    model.eval()
+    logger.info("Loaded model from %s (%s params)", src, count_parameters(model))
+    return model
 
 
 def main() -> None:

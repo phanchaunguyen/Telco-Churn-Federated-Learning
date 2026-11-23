@@ -27,6 +27,7 @@
 | **14** | `14_naming_convention.md` | All | W1 | ✅ | **Quy ước đánh số file/thư mục theo thứ tự pipeline** |
 | **15** | `15_w6_results.md` | B | W6 | ✅ | **E2 partition impact (PASS) + E3 aggregation (FAIL), 2 lỗi metric, FedAvgM divergence** |
 | **16** | `16_w8_results.md` | C | W8 | ✅ | **E6 scalability (PASS, cost phẳng) + E7 communication (PASS, 0.18% AUC cho 5× băng thông)** |
+| **17** | `17_layer4_serving.md` | D | W9 | ✅ | **FastAPI + Superset 3 dashboard + Grafana live + Airflow DAG** |
 
 ---
 

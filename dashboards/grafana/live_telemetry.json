@@ -1,0 +1,224 @@
+{
+  "uid": "fltelco-live",
+  "title": "FL Telco \u2014 Live Training Telemetry",
+  "tags": [
+    "fl",
+    "telco",
+    "live"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5s",
+  "time": {
+    "from": "now-30m",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "AUC per round \u2014 IID baseline",
+      "description": "AUC reported by the server each round for the IID partition. E1 records only final metrics per fold, so E2 is the run that carries a round-by-round curve.",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "FLTelco"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT round AS time, auc, run FROM e1_convergence WHERE run = 'iid' ORDER BY round",
+          "rawQuery": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 0
+          },
+          "unit": "none",
+          "min": 0.7,
+          "max": 0.95
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "AUC per round \u2014 non-IID partitions",
+      "description": "Same metric across IID and the two Dirichlet skews, so the cost of non-IID is visible round by round.",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "FLTelco"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT round AS time, auc, run FROM e1_convergence WHERE run <> 'iid' ORDER BY round",
+          "rawQuery": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 0
+          },
+          "unit": "none",
+          "min": 0.7,
+          "max": 0.95
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "barchart",
+      "title": "Per-client AUC \u2014 FedAvg vs FedProx",
+      "description": "Each bar is one silo. A model that is good on average but poor on the smallest silo is not deployable, so the spread matters more than the mean.",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 9
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "FLTelco"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT label, strategy, value FROM e5_fairness WHERE view = 'client' ORDER BY label",
+          "rawQuery": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "min": 0.7,
+          "max": 0.85
+        },
+        "overrides": []
+      },
+      "options": {
+        "xField": "label",
+        "orientation": "vertical",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "barchart",
+      "title": "Recall by churn reason",
+      "description": "Share of churners flagged by the global top-10% cut-off, per reason. Churn Category is only populated for customers who churned, so AUC is undefined here and recall is the meaningful metric.",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 9
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "FLTelco"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT label, strategy, value FROM e5_fairness WHERE view = 'reason' ORDER BY label",
+          "rawQuery": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 0.5
+        },
+        "overrides": []
+      },
+      "options": {
+        "xField": "label",
+        "orientation": "vertical",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": "table",
+      "title": "Privacy-utility curve (E4)",
+      "description": "AUC against epsilon. The non-DP row has epsilon = 0 in the table because the accountant reports nothing; read it as infinite budget.",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 18
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "FLTelco"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT noise_multiplier, epsilon, auc, pr_auc FROM e4_privacy ORDER BY noise_multiplier",
+          "rawQuery": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      }
+    }
+  ]
+}

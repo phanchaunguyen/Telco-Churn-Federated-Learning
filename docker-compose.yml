@@ -148,6 +148,42 @@ services:
       - ./:/opt/bitnami/spark/work:rw
 
   # ---------------------------------------------------------------------------
+  # Superset — 3 static BI dashboards (convergence, fairness, privacy)
+  # Reads the same postgres as MLflow; tables are written by
+  # `python -m src.serving.s23_export_results`.
+  # ---------------------------------------------------------------------------
+  superset:
+    image: apache/superset:3.1.0
+    container_name: fltelco-superset
+    restart: unless-stopped
+    ports:
+      - "8088:8088"
+    environment:
+      SUPERSET_SECRET_KEY: fltelco-superset-secret-change-me
+      SUPERSET_CONFIG_PATH: /app/pythonpath/superset_config.py
+      # Bootstrap admin, created by the entrypoint on first boot
+      ADMIN_USERNAME: admin
+      ADMIN_FIRST_NAME: Admin
+      ADMIN_LAST_NAME: User
+      ADMIN_EMAIL: admin@fltelco.local
+      ADMIN_PASSWORD: admin
+    volumes:
+      - ./dashboards/superset/superset_config.py:/app/pythonpath/superset_config.py:ro
+      - ./dashboards/superset/init_superset.sh:/app/init_superset.sh:ro
+      - superset_data:/app/superset_home
+    entrypoint: ["/bin/bash", "/app/init_superset.sh"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8088/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 90s
+    profiles: ["full"]
+
+  # ---------------------------------------------------------------------------
   # Grafana — live telemetry dashboard (optional; enable with --profile full)
   # ---------------------------------------------------------------------------
   grafana:
@@ -161,6 +197,11 @@ services:
       GF_INSTALL_PLUGINS: ""
     volumes:
       - grafana_data:/var/lib/grafana
+      - ./dashboards/grafana:/etc/grafana/provisioning/dashboards:ro
+      - ./dashboards/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
     profiles: ["full"]
 
 volumes:
@@ -168,3 +209,4 @@ volumes:
   minio_data:
   kafka_data:
   grafana_data:
+  superset_data:
