@@ -1,0 +1,217 @@
+{
+  "passed": true,
+  "thresholds": {
+    "min_ks_pass_rate": 0.9,
+    "max_correlation_diff": 0.1,
+    "max_tstr_auc_gap": 0.05
+  },
+  "ks": {
+    "pass_rate": 1.0,
+    "n_columns": 29,
+    "n_passed": 29,
+    "per_column": {
+      "Age": {
+        "test": "ks",
+        "statistic": 0.0005083145513185006,
+        "p_value": 1.0,
+        "passed": true
+      },
+      "Number of Dependents": {
+        "test": "ks",
+        "statistic": 0.00044012293682405,
+        "p_value": 1.0,
+        "passed": true
+      },
+      "Tenure in Months": {
+        "test": "ks",
+        "statistic": 0.0009327943464237931,
+        "p_value": 1.0,
+        "passed": true
+      },
+      "Number of Referrals": {
+        "test": "ks",
+        "statistic": 0.0010827152343008128,
+        "p_value": 1.0,
+        "passed": true
+      },
+      "Avg Monthly Long Distance Charges": {
+        "test": "ks",
+        "statistic": 0.0009504716372604749,
+        "p_value": 1.0,
+        "passed": true
+      },
+      "Avg Monthly GB Download": {
+        "test": "ks",
+        "statistic": 0.0006961781445645743,
+        "p_value": 1.0,
+        "passed": true
+      },
+      "Monthly Charge": {
+        "test": "ks",
+        "statistic": 0.0007430113830392826,
+        "p_value": 1.0,
+        "passed": true
+      },
+      "Total Charges": {
+        "test": "ks",
+        "statistic": 0.000976592866628767,
+        "p_value": 1.0,
+        "passed": true
+      },
+      "Total Extra Data Charges": {
+        "test": "ks",
+        "statistic": 0.00033173211914250267,
+        "p_value": 1.0,
+        "passed": true
+      },
+      "Total Long Distance Charges": {
+        "test": "ks",
+        "statistic": 0.0009950969455511105,
+        "p_value": 1.0,
+        "passed": true
+      },
+      "Gender": {
+        "test": "total_variation",
+        "statistic": 0.00026755473344713954,
+        "p_value": null,
+        "passed": true
+      },
+      "Senior Citizen": {
+        "test": "total_variation",
+        "statistic": 6.278182508066832e-05,
+        "p_value": null,
+        "passed": true
+      },
+      "Married": {
+        "test": "total_variation",
+        "statistic": 0.00018611686586986198,
+        "p_value": null,
+        "passed": true
+      },
+      "Offer": {
+        "test": "total_variation",
+        "statistic": 0.000622580345285513,
+        "p_value": null,
+        "passed": true
+      },
+      "Contract": {
+        "test": "total_variation",
+        "statistic": 0.0002906547144754523,
+        "p_value": null,
+        "passed": true
+      },
+      "Paperless Billing": {
+        "test": "total_variation",
+        "statistic": 0.000142505217226363,
+        "p_value": null,
+        "passed": true
+      },
+      "Payment Method": {
+        "test": "total_variation",
+        "statistic": 0.0008565553025991907,
+        "p_value": null,
+        "passed": true
+      },
+      "Phone Service": {
+        "test": "total_variation",
+        "statistic": 0.000433296907607697,
+        "p_value": null,
+        "passed": true
+      },
+      "Multiple Lines": {
+        "test": "total_variation",
+        "statistic": 6.729842534664021e-06,
+        "p_value": null,
+        "passed": true
+      },
+      "Internet Service": {
+        "test": "total_variation",
+        "statistic": 8.577025232404945e-05,
+        "p_value": null,
+        "passed": true
+      },
+      "Internet Type": {
+        "test": "total_variation",
+        "statistic": 0.0004380337696831618,
+        "p_value": null,
+        "passed": true
+      },
+      "Online Security": {
+        "test": "total_variation",
+        "statistic": 0.000513191045342476,
+        "p_value": null,
+        "passed": true
+      },
+      "Online Backup": {
+        "test": "total_variation",
+        "statistic": 9.0779548472808e-05,
+        "p_value": null,
+        "passed": true
+      },
+      "Device Protection Plan": {
+        "test": "total_variation",
+        "statistic": 8.823543919561638e-05,
+        "p_value": null,
+        "passed": true
+      },
+      "Premium Tech Support": {
+        "test": "total_variation",
+        "statistic": 0.00015352627584899747,
+        "p_value": null,
+        "passed": true
+      },
+      "Streaming TV": {
+        "test": "total_variation",
+        "statistic": 0.0005056327072661959,
+        "p_value": null,
+        "passed": true
+      },
+      "Streaming Movies": {
+        "test": "total_variation",
+        "statistic": 0.0001866539556061586,
+        "p_value": null,
+        "passed": true
+      },
+      "Streaming Music": {
+        "test": "total_variation",
+        "statistic": 0.0003781897173211757,
+        "p_value": null,
+        "passed": true
+      },
+      "Unlimited Data": {
+        "test": "total_variation",
+        "statistic": 0.00011359324606341481,
+        "p_value": null,
+        "passed": true
+      }
+    }
+  },
+  "correlation": {
+    "mean_abs_diff": 0.020945083371471152,
+    "max_abs_diff": 0.12485367067718858,
+    "frobenius_diff": 0.3010182526123939,
+    "n_pairs": 90,
+    "passed": true
+  },
+  "tstr": {
+    "tstr_auc": 0.8940989531405782,
+    "reference_auc": 0.931546270280069,
+    "reference_source": "train_real -> test_real",
+    "auc_gap": 0.03744731713949079,
+    "passed": true
+  },
+  "shapes": {
+    "train_real": [
+      5271,
+      31
+    ],
+    "synthetic": [
+      1000000,
+      30
+    ],
+    "test_real": [
+      1318,
+      31
+    ]
+  }
+}

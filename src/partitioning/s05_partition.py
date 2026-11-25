@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import json
 import logging
+import shutil
 from pathlib import Path
 from typing import Any, Literal
 
@@ -330,15 +331,29 @@ def build_partitions(
         # A stale client_{i}.parquet from a previous run with a larger K would
         # survive the overwrite and be picked up by fit_vocabulary, silently
         # mixing two partitionings. Clear the directory first.
+        #
+        # The path may be a file (pandas output) or a directory (Spark output,
+        # which writes part-*.parquet inside). Both are readable by
+        # pandas.read_parquet, so both must be removable here.
         for stale in part_dir.glob("client_*.parquet"):
-            stale.unlink()
+            if stale.is_dir():
+                shutil.rmtree(stale)
+            else:
+                stale.unlink()
 
         for c, part in enumerate(partitions):
             path = part_dir / f"client_{c}.parquet"
             part.to_parquet(path, index=False)
         logger.info("Wrote %s client parquet files to %s", n_clients, part_dir)
 
-        meta_path = cfg.paths.partition_metadata
+        # Metadata follows the partitions. When `out_dir` is given (tests, or a
+        # fold-specific build) the summary must land beside those files, not in
+        # the project-wide results/ file — otherwise a test run with a 600-row
+        # fixture overwrites the real 900,000-row entry.
+        if out_dir is not None:
+            meta_path = Path(out_dir) / "partition_metadata.json"
+        else:
+            meta_path = cfg.paths.partition_metadata
         meta_path.parent.mkdir(parents=True, exist_ok=True)
         existing: dict[str, Any] = {}
         if meta_path.exists():

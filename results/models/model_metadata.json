@@ -1,0 +1,18 @@
+{
+  "model_file": "fl_fedavg.pt",
+  "preprocessing_file": "preprocessing_iid.json",
+  "input_dim": 56,
+  "n_params": 18049,
+  "rounds": 50,
+  "seed": 42,
+  "strategy": "fedavg",
+  "partition": "iid",
+  "metrics_test_real": {
+    "auc": 0.8949005256956404,
+    "pr_auc": 0.8121044611475638,
+    "f1": 0.6666666666666666,
+    "recall_at_10pct": 0.32887700534759357,
+    "n_samples": 1318,
+    "n_churned": 374
+  }
+}

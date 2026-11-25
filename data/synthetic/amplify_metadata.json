@@ -1,0 +1,136 @@
+{
+  "method": "rank_gaussian_copula",
+  "n_rows": 1000000,
+  "n_train_rows": 5271,
+  "train_churn_rate": 0.28362739518118,
+  "synthetic_churn_rate": 0.283874,
+  "seed": 42,
+  "numeric_ranges": {
+    "Age": [
+      19.0,
+      80.0
+    ],
+    "Number of Dependents": [
+      0.0,
+      9.0
+    ],
+    "Tenure in Months": [
+      1.0,
+      72.0
+    ],
+    "Number of Referrals": [
+      0.0,
+      11.0
+    ],
+    "Avg Monthly Long Distance Charges": [
+      0.0,
+      49.99
+    ],
+    "Avg Monthly GB Download": [
+      0.0,
+      85.0
+    ],
+    "Monthly Charge": [
+      18.25,
+      118.75
+    ],
+    "Total Charges": [
+      18.85,
+      8684.8
+    ],
+    "Total Extra Data Charges": [
+      0.0,
+      150.0
+    ],
+    "Total Long Distance Charges": [
+      0.0,
+      3564.72
+    ]
+  },
+  "encoders": {
+    "Gender": {
+      "Female": 0,
+      "Male": 1
+    },
+    "Senior Citizen": {
+      "No": 0,
+      "Yes": 1
+    },
+    "Married": {
+      "No": 0,
+      "Yes": 1
+    },
+    "Offer": {
+      "None": 0,
+      "Offer A": 1,
+      "Offer B": 2,
+      "Offer C": 3,
+      "Offer D": 4,
+      "Offer E": 5
+    },
+    "Contract": {
+      "Month-to-Month": 0,
+      "One Year": 1,
+      "Two Year": 2
+    },
+    "Paperless Billing": {
+      "No": 0,
+      "Yes": 1
+    },
+    "Payment Method": {
+      "Bank Withdrawal": 0,
+      "Credit Card": 1,
+      "Mailed Check": 2
+    },
+    "Phone Service": {
+      "No": 0,
+      "Yes": 1
+    },
+    "Multiple Lines": {
+      "No": 0,
+      "Yes": 1
+    },
+    "Internet Service": {
+      "No": 0,
+      "Yes": 1
+    },
+    "Internet Type": {
+      "Cable": 0,
+      "DSL": 1,
+      "Fiber Optic": 2,
+      "None": 3
+    },
+    "Online Security": {
+      "No": 0,
+      "Yes": 1
+    },
+    "Online Backup": {
+      "No": 0,
+      "Yes": 1
+    },
+    "Device Protection Plan": {
+      "No": 0,
+      "Yes": 1
+    },
+    "Premium Tech Support": {
+      "No": 0,
+      "Yes": 1
+    },
+    "Streaming TV": {
+      "No": 0,
+      "Yes": 1
+    },
+    "Streaming Movies": {
+      "No": 0,
+      "Yes": 1
+    },
+    "Streaming Music": {
+      "No": 0,
+      "Yes": 1
+    },
+    "Unlimited Data": {
+      "No": 0,
+      "Yes": 1
+    }
+  }
+}

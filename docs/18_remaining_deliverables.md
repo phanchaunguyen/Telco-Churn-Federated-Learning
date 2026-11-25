@@ -20,7 +20,7 @@ nào tái lập được. Một con số trong báo cáo phải sinh lại đư�
 | AUC | **0.9421** |
 | Samples | 6,589 |
 | Churned | 1,869 |
-| Score range | 19 – 100 |
+| Score range | 5 – 96 |
 
 Khớp chính xác con số trong docs.
 

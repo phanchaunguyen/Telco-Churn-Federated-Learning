@@ -1,0 +1,12 @@
+{
+  "experiment": "D14",
+  "description": "Spark SQL AUC vs pandas AUC on the same predictions",
+  "spark_auc": 0.894901,
+  "pandas_auc": 0.8949005256956404,
+  "abs_diff": 4.74304359565636e-07,
+  "tolerance": 0.001,
+  "passed": true,
+  "n_rows": 1318,
+  "n_pos": 374,
+  "n_neg": 944
+}

@@ -22,10 +22,22 @@ ENV/
 # --- Data (never commit) ---
 data/raw/*
 !data/raw/.gitkeep
+
+# The processed artifacts are small (~2.6 MB total) and every experiment reads
+# them, so they are tracked: a teammate can clone and run E1-E7 without
+# re-running the clean/split/amplify pipeline. The 1M-row synthetic files and
+# the 10-silo partitions stay out — those are ~184 MB and regenerate in under a
+# minute with the commands in docs/05_spark_pipeline.md.
 data/processed/*
 !data/processed/.gitkeep
+!data/processed/*.parquet
+!data/processed/*.json
+!data/processed/fold_*/
+!data/processed/fold_*/*.parquet
+
 data/synthetic/*
 !data/synthetic/.gitkeep
+!data/synthetic/*.json
 
 # --- Experiment outputs ---
 # Large per-run dumps stay out of git; the small report-ready summaries
@@ -40,12 +52,25 @@ results/*
 !results/*_verification.json
 !results/spark_benchmark.csv
 !results/eda_*.csv
+!results/spark_eval.json
+!results/spark_eval.md
+
+# Serving artifacts: the exported model (76 KB) and its predictions (12 KB).
+# Both are small and let a teammate start the API without a 6-minute retrain.
+!results/models/
+!results/models/*.pt
+!results/models/*.json
+!results/predictions/
+!results/predictions/*.parquet
+!results/predictions/*.json
+
 results/runs/
 mlruns/
 mlartifacts/
 mlflow.db
 
 # --- Model checkpoints ---
+# Blanket ignore, with the one serving artifact re-included above.
 *.pt
 *.pth
 *.ckpt
