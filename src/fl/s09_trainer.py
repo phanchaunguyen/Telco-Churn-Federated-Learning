@@ -130,6 +130,10 @@ class LocalTrainer:
         # Epsilon accumulated across every fit() call on this client. DP-SGD
         # composes over rounds, so the accountant must live on the trainer.
         self.epsilon: float = 0.0
+        # Wall-clock of the most recent fit(), read by the telemetry producer
+        # so per-client duration can be published without changing fit()'s
+        # return type.
+        self.last_duration_sec: float = 0.0
         self._privacy_engine: Any = None
 
         self._dataset = TensorDataset(
@@ -229,6 +233,7 @@ class LocalTrainer:
         _, auc = self.evaluate()
         weights = get_weights(self.model)
         duration = time.perf_counter() - t0
+        self.last_duration_sec = duration
 
         if self.noise_multiplier > 0:
             # The accountant composes over every step taken so far, so epsilon

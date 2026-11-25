@@ -157,7 +157,10 @@ spark:
 # gRPC/Flower remains the ONLY channel for model weights.
 # -----------------------------------------------------------------------------
 kafka:
-  bootstrap_servers: kafka:9092
+  # Host-side address. Code running inside the compose network (the consumer
+  # container, if any) would use kafka:9092 instead; everything in this project
+  # runs on the host, so the published listener is the right default.
+  bootstrap_servers: localhost:29092
   topics:
     telemetry: fl_telemetry
     round_summary: fl_round_summary

@@ -21,46 +21,39 @@ services:
       retries: 5
 
   # ---------------------------------------------------------------------------
-  # MinIO — S3-compatible object storage for client silos
+  # MinIO — S3-compatible object storage for MLflow artifacts
+  #
+  # `minio/minio:latest` is no longer pullable from Docker Hub (the repository
+  # was retired), so this uses the Bitnami legacy build, which is the same
+  # server under a different tag. The `mc` client image is likewise unavailable,
+  # so bucket creation moved into the MLflow container's start-up command.
   # ---------------------------------------------------------------------------
   minio:
-    image: minio/minio:latest
+    image: bitnamilegacy/minio:latest
     container_name: fltelco-minio
     restart: unless-stopped
+    # The Bitnami image runs as uid 1001, but a freshly created named volume is
+    # owned by root, so MinIO cannot create /data/.minio.sys and exits with
+    # "file access denied". Running as root is acceptable here because this is
+    # a local dev stack and the volume holds only MLflow artifacts.
+    user: root
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
     ports:
-      - "9000:9000"   # S3 API
-      - "9001:9001"   # Web console
+      # Host ports 9000/9001 are commonly taken (Jupyter kernels, other MinIO
+      # instances). MLflow reaches MinIO over the compose network as
+      # minio:9000, so only the host mapping needs to move.
+      - "9100:9000"   # S3 API
+      - "9101:9001"   # Web console
     volumes:
       - minio_data:/data
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 10s
       timeout: 5s
       retries: 5
-
-  # ---------------------------------------------------------------------------
-  # MinIO client — creates the 10 client silo buckets on first boot
-  # ---------------------------------------------------------------------------
-  minio-init:
-    image: minio/mc:latest
-    container_name: fltelco-minio-init
-    depends_on:
-      minio:
-        condition: service_healthy
-    entrypoint: >
-      /bin/sh -c "
-      mc alias set local http://minio:9000 minioadmin minioadmin;
-      for i in 0 1 2 3 4 5 6 7 8 9; do
-        mc mb --ignore-existing local/clients/client_$$i;
-      done;
-      mc mb --ignore-existing local/artifacts;
-      echo 'MinIO buckets ready';
-      "
-    restart: "no"
 
   # ---------------------------------------------------------------------------
   # MLflow tracking server
@@ -78,39 +71,55 @@ services:
       MLFLOW_S3_ENDPOINT_URL: http://minio:9000
       AWS_ACCESS_KEY_ID: minioadmin
       AWS_SECRET_ACCESS_KEY: minioadmin
+    # `mlflow server` creates the schema itself, which is more reliable than
+    # running `mlflow db upgrade` by hand: the upgrade path fails on a database
+    # whose alembic history was reset. The catch is that MLflow 2.10 hands
+    # gunicorn a 127.0.0.1 bind regardless of --host, so the published port is
+    # unreachable. `network_mode: host` sidesteps that entirely — the server
+    # listens on the host's loopback and localhost:5000 works as expected.
+    network_mode: host
     command: >
       sh -c "pip install --no-cache-dir psycopg2-binary boto3 &&
              mlflow server
-             --backend-store-uri postgresql://mlflow:mlflow@postgres:5432/mlflow
+             --backend-store-uri postgresql://mlflow:mlflow@localhost:5432/mlflow
              --default-artifact-root s3://artifacts/
-             --host 0.0.0.0
+             --host 127.0.0.1
              --port 5000"
-    ports:
-      - "5000:5000"
 
   # ---------------------------------------------------------------------------
   # Kafka — KRaft mode (no ZooKeeper). Telemetry bus ONLY, never model weights.
+  #
+  # Bitnami retired the `bitnami/kafka` tags, so this uses the official Apache
+  # image. It is the same broker; only the environment variable prefix differs
+  # (KAFKA_ instead of KAFKA_CFG_) and the data directory moved to /var/lib.
   # ---------------------------------------------------------------------------
   kafka:
-    image: bitnami/kafka:3.6
+    image: apache/kafka:latest
     container_name: fltelco-kafka
     restart: unless-stopped
     environment:
-      KAFKA_CFG_NODE_ID: 0
-      KAFKA_CFG_PROCESS_ROLES: controller,broker
-      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 0@kafka:9093
-      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
-      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
-      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
-      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
-      KAFKA_CFG_LOG_RETENTION_HOURS: 168
+      KAFKA_NODE_ID: 0
+      KAFKA_PROCESS_ROLES: controller,broker
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 0@kafka:9093
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,PLAINTEXT_HOST://:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_LOG_RETENTION_HOURS: 168
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
     ports:
-      - "9092:9092"
+      # 9092 is the in-network listener (kafka:9092). The host reaches the
+      # broker through the PLAINTEXT_HOST listener on 29092, because a single
+      # advertised address cannot serve both the compose network and localhost.
+      - "29092:29092"
     volumes:
-      - kafka_data:/bitnami/kafka
+      - kafka_data:/var/lib/kafka/data
     healthcheck:
-      test: ["CMD-SHELL", "kafka-topics.sh --bootstrap-server localhost:9092 --list || exit 1"]
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list || exit 1"]
       interval: 15s
       timeout: 10s
       retries: 5

@@ -218,6 +218,7 @@ def run_sequential(
     partition_dir: str | Path | None = None,
     fraction_fit: float | None = None,
     noise_multiplier: float = 0.0,
+    telemetry: bool = False,
     seed: int | None = None,
 ) -> dict[str, Any]:
     """Run FedAvg rounds sequentially, without Ray.
@@ -246,6 +247,11 @@ def run_sequential(
     noise_multiplier:
         DP-SGD noise scale applied on every client. ``0.0`` (default) is
         non-private FedAvg.
+    telemetry:
+        Publish per-client and per-round metrics to Kafka. Off by default so
+        experiments do not depend on a broker being up. Telemetry is
+        fire-and-forget: a missing broker logs a warning and the run continues,
+        because metrics are observability while weights are the training.
 
     Returns
     -------
@@ -298,6 +304,17 @@ def run_sequential(
     beta = cfg.fl.strategies.fedavgm.server_momentum
     lr = cfg.fl.strategies.fedavgm.server_learning_rate
 
+    # Telemetry is optional and never fatal. The producer swallows broker
+    # errors internally, so nothing below needs a try/except.
+    producer = None
+    if telemetry:
+        from src.telemetry.s29_producer import TelemetryProducer
+
+        producer = TelemetryProducer()
+        if not producer.available:
+            logger.warning("Telemetry requested but Kafka is unreachable")
+            producer = None
+
     # Wall-clock for the whole run, excluding client construction above. E6
     # measures scaling, so the timer must cover only the federated loop.
     run_start = time.perf_counter()
@@ -323,6 +340,17 @@ def run_sequential(
                 global_weights, {"server_round": rnd}
             )
             results.append((weights, n_samples, metrics))
+
+            if producer is not None:
+                producer.send_client_metrics(
+                    round=rnd,
+                    client_id=cid,
+                    local_auc=float(metrics["auc"]),
+                    local_loss=float(metrics["loss"]),
+                    n_samples=int(n_samples),
+                    bytes_sent=int(sum(w.nbytes for w in weights)),
+                    duration_sec=float(clients[cid].trainer.last_duration_sec),
+                )
 
         # FedAvg: W_global = sum_i (n_i / n) * W_i
         total = sum(n for _, n, _ in results)
@@ -361,7 +389,20 @@ def run_sequential(
         round_auc = float(np.nanmean([m["auc"] for _, _, m in results]))
         losses.append((rnd, round_loss))
         aucs.append((rnd, round_auc))
-        round_times.append((rnd, time.perf_counter() - round_start))
+        round_elapsed = time.perf_counter() - round_start
+        round_times.append((rnd, round_elapsed))
+
+        if producer is not None:
+            producer.send_round_summary(
+                round=rnd,
+                global_auc=round_auc,
+                global_loss=round_loss,
+                n_clients_selected=len(selected),
+                total_bytes=sum(
+                    sum(w.nbytes for w in weights) for weights, _, _ in results
+                ),
+                round_duration_sec=round_elapsed,
+            )
 
         logger.info(
             "Round %s/%s: clients=%s loss=%.4f auc=%.4f",
@@ -374,6 +415,11 @@ def run_sequential(
 
     total_seconds = time.perf_counter() - run_start
 
+    telemetry_stats: dict[str, int] = {}
+    if producer is not None:
+        telemetry_stats = producer.stats()
+        producer.close()
+
     return {
         "strategy": strategy_name,
         "partition": partition,
@@ -384,6 +430,7 @@ def run_sequential(
         "metrics_distributed": {"auc": aucs},
         "round_times": round_times,
         "total_seconds": total_seconds,
+        "telemetry": telemetry_stats,
         "epsilons": [c.epsilon for c in clients],
         "final_weights": global_weights,
         "input_dim": input_dim,

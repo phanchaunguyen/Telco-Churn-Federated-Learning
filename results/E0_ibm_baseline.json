@@ -1,0 +1,11 @@
+{
+  "experiment": "E0",
+  "description": "IBM Churn Score univariate AUC (external reference)",
+  "score_column": "Churn Score",
+  "auc": 0.9421317708191638,
+  "n_samples": 6589,
+  "n_churned": 1869,
+  "score_min": 5.0,
+  "score_max": 96.0,
+  "score_mean": 59.191227803915616
+}

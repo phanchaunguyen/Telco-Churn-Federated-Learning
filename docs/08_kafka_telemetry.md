@@ -1,7 +1,12 @@
 # 08 — Kafka Telemetry
 
-**Owner:** Person B + D · **Tuần:** W3–W4 · **Trạng thái:** ⬜ Chưa bắt đầu
+**Owner:** Person B + D · **Tuần:** W3–W4 · **Trạng thái:** ✅ Hoàn thành (2026-11-25)
 **Deliverables:** D15 (Kafka producer/consumer + docker-compose full-stack)
+
+> **Đã implement:** `src/telemetry/s29_producer.py` + `s30_consumer.py`,
+> tích hợp vào `run_sequential(telemetry=True)`. Kết quả end-to-end: 60 message
+> gửi, 0 lỗi, 50 client rows + 10 round rows trong postgres. Chi tiết xem
+> `docs/18_remaining_deliverables.md` §4.
 
 ---
 

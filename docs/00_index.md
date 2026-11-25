@@ -28,6 +28,7 @@
 | **15** | `15_w6_results.md` | B | W6 | ✅ | **E2 partition impact (PASS) + E3 aggregation (FAIL), 2 lỗi metric, FedAvgM divergence** |
 | **16** | `16_w8_results.md` | C | W8 | ✅ | **E6 scalability (PASS, cost phẳng) + E7 communication (PASS, 0.18% AUC cho 5× băng thông)** |
 | **17** | `17_layer4_serving.md` | D | W9 | ✅ | **FastAPI + Superset 3 dashboard + Grafana live + Airflow DAG** |
+| **18** | `18_remaining_deliverables.md` | All | W10 | ✅ | **D15 Kafka telemetry + D14 Spark eval (PASS) + D7 MLflow backfill + D4 E0 baseline** |
 
 ---
 
