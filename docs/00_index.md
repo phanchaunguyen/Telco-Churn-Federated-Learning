@@ -29,6 +29,9 @@
 | **16** | `16_w8_results.md` | C | W8 | ✅ | **E6 scalability (PASS, cost phẳng) + E7 communication (PASS, 0.18% AUC cho 5× băng thông)** |
 | **17** | `17_layer4_serving.md` | D | W9 | ✅ | **FastAPI + Superset 3 dashboard + Grafana live + Airflow DAG** |
 | **18** | `18_remaining_deliverables.md` | All | W10 | ✅ | **D15 Kafka telemetry + D14 Spark eval (PASS) + D7 MLflow backfill + D4 E0 baseline** |
+| **19** | `19_project_source_map.md` | All | W11 | ✅ | **Bản đồ source: file tree, ý nghĩa từng module, bảng tra nhanh** |
+| **20** | `20_metrics_compendium.md` | All | W11 | ✅ | **Toàn bộ số liệu + so sánh 7 cặp cách làm + 10 limitations** |
+| **21** | `21_presentation_script.md` | All | W11 | ✅ | **Script thuyết trình 15 phút + 8 câu hỏi phản biện** |
 
 ---
 
